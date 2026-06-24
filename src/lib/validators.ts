@@ -1,7 +1,39 @@
 import { z } from "zod";
 
 const requiredSelect = z.string().uuid("Choose an option");
-const optionalText = z.string().trim().optional().or(z.literal(""));
+const optionalText = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.string().trim().optional()
+);
+const optionalUpperText = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value ? value.toUpperCase() : value))
+);
+
+const optionalInt = (opts: { min?: number; max?: number; message?: string } = {}) =>
+  z.preprocess(
+    (val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      const num = Number(val);
+      return Number.isNaN(num) ? undefined : num;
+    },
+    z
+      .number()
+      .int()
+      .min(opts.min ?? -Infinity, opts.message)
+      .max(opts.max ?? Infinity, opts.message)
+      .optional()
+  );
+
+const optionalEnum = <T extends readonly [string, ...string[]]>(values: T) =>
+  z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.enum(values).optional()
+  );
 
 export const loginSchema = z.object({
   username: z
@@ -17,19 +49,27 @@ export const reportSchema = z.object({
   rental_company_id: requiredSelect,
   make_id: requiredSelect,
   model_id: requiredSelect,
-  year: z.coerce
-    .number()
-    .int()
-    .min(1990, "Year must be 1990 or newer")
-    .max(2100, "Year is too far in the future"),
-  trim: optionalText,
-  mileage: z.coerce.number().int().min(0, "Mileage cannot be negative"),
-  exterior_condition: z.enum(["excellent", "good", "fair", "poor"]),
-  interior_condition: z.enum(["excellent", "good", "fair", "poor"]),
-  fuel_or_battery_level: optionalText,
-  notes: optionalText,
-  photo_url: z.string().trim().url("Enter a valid URL").optional().or(z.literal("")),
-  observed_at: z.string().min(1, "Observation date is required"),
+  year: optionalInt({ min: 1990, max: 2100, message: "Year must be between 1990 and 2100" }),
+  trim: optionalEnum(["entry", "mid_tier", "high_tier"]),
+  mileage: optionalInt({ min: 0, message: "Mileage cannot be negative" }),
+  exterior_condition: z.enum(["excellent", "good", "fair", "poor"], {
+    errorMap: () => ({ message: "Choose an exterior condition" }),
+  }),
+  interior_condition: z.enum(["excellent", "good", "fair", "poor"], {
+    errorMap: () => ({ message: "Choose an interior condition" }),
+  }),
+  tire_condition: optionalEnum(["brand_new", "decent", "almost_bald"]),
+  fuel_type: optionalEnum(["gasoline", "phev", "hybrid", "bev", "hydrogen", "diesel"]),
+  fuel_octane: optionalEnum(["regular", "midgrade", "premium"]),
+  ev_charging_speed: optionalEnum(["level_2", "dcfc_150", "dcfc_250", "dcfc_350"]),
+  fuel_level_percent: optionalInt({ min: 0, max: 100 }),
+  lane_centering: z.boolean().optional(),
+  lane_departure_assist: z.boolean().optional(),
+  adaptive_cruise_control: z.boolean().optional(),
+  hands_free_driving: z.boolean().optional(),
+  license_plate: optionalUpperText,
+  license_plate_state: optionalText,
+  observed_at: optionalText,
 });
 
 export type LoginFormValues = z.infer<typeof loginSchema>;

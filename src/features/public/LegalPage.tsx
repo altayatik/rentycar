@@ -1,3 +1,5 @@
+import { Mail } from "lucide-react";
+
 const sections = [
   {
     title: "Independent project",
@@ -17,7 +19,7 @@ const sections = [
   },
   {
     title: "User-submitted content",
-    body: "Users are responsible for the information they submit. Do not submit private personal information, license plates, VINs, payment information, reservation numbers, photos of people without permission, or anything confidential.",
+    body: "Users are responsible for the information they submit. License plates are an optional, supported field for vehicle spotting purposes only. Do not submit other private personal information, VINs, payment information, reservation numbers, photos of people without permission, or anything confidential.",
   },
   {
     title: "Moderation/removal",
@@ -37,7 +39,7 @@ export function LegalPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <section className="panel p-6 sm:p-8">
-        <p className="text-sm font-semibold uppercase tracking-normal text-teal-700">Legal</p>
+        <p className="text-sm font-semibold uppercase tracking-normal text-indigo-700">Legal</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
           Practical disclaimers for early testing.
         </h1>
@@ -53,6 +55,23 @@ export function LegalPage() {
             <p className="mt-3 text-sm leading-7 text-slate-600">{section.body}</p>
           </article>
         ))}
+      </section>
+
+      <section className="panel p-6 sm:p-8">
+        <h2 className="text-lg font-semibold text-slate-950">Contact</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          For corrections, removal requests, or other questions about RentyCar, reach out below.
+        </p>
+        <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+          Note: this inbox is not operational yet — this page is still in development.
+        </p>
+        <a
+          className="button-primary mt-4 inline-flex w-fit"
+          href="mailto:rentycar@altayatik.com"
+        >
+          <Mail className="h-4 w-4" aria-hidden="true" />
+          Contact rentycar@altayatik.com
+        </a>
       </section>
     </div>
   );

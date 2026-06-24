@@ -4,7 +4,7 @@ export function AboutPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <section className="panel p-6 sm:p-8">
-        <p className="text-sm font-semibold uppercase tracking-normal text-teal-700">About RentyCar</p>
+        <p className="text-sm font-semibold uppercase tracking-normal text-indigo-700">About RentyCar</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
           A small experiment for clearer rental car expectations.
         </h1>

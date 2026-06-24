@@ -3,8 +3,8 @@ import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../features/auth/authStore";
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  `inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 ${
-    isActive ? "bg-teal-50 text-teal-800" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+  `inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700 ${
+    isActive ? "bg-indigo-50 text-indigo-800" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
   }`;
 
 export function Navbar() {
@@ -14,7 +14,7 @@ export function Navbar() {
     <header className="sticky top-0 z-[1000] border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-2 text-lg font-bold text-slate-950">
-          <span className="rounded-lg bg-teal-700 p-2 text-white">
+          <span className="rounded-lg bg-indigo-700 p-2 text-white">
             <CarFront className="h-5 w-5" aria-hidden="true" />
           </span>
           RentyCar

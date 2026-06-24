@@ -2,6 +2,11 @@ export type Role = "admin" | "reporter";
 export type Condition = "excellent" | "good" | "fair" | "poor";
 export type CountryCode = "US" | "CA";
 export type RentalCompanyType = "traditional_rental" | "car_sharing" | "peer_to_peer";
+export type TrimTier = "entry" | "mid_tier" | "high_tier";
+export type FuelType = "gasoline" | "phev" | "hybrid" | "bev" | "hydrogen" | "diesel";
+export type FuelOctane = "regular" | "midgrade" | "premium";
+export type EvChargingSpeed = "level_2" | "dcfc_150" | "dcfc_250" | "dcfc_350";
+export type TireCondition = "brand_new" | "decent" | "almost_bald";
 
 export interface Profile {
   id: string;
@@ -57,13 +62,21 @@ export interface VehicleReport {
   make_id: string;
   model_id: string;
   year: number | null;
-  trim: string | null;
+  trim: TrimTier | null;
   mileage: number | null;
   exterior_condition: Condition;
   interior_condition: Condition;
-  fuel_or_battery_level: string | null;
-  notes: string | null;
-  photo_url: string | null;
+  tire_condition: TireCondition | null;
+  fuel_type: FuelType | null;
+  fuel_octane: FuelOctane | null;
+  ev_charging_speed: EvChargingSpeed | null;
+  fuel_level_percent: number | null;
+  lane_centering: boolean;
+  lane_departure_assist: boolean;
+  adaptive_cruise_control: boolean;
+  hands_free_driving: boolean;
+  license_plate: string | null;
+  license_plate_state: string | null;
   observed_at: string;
   created_at: string;
   updated_at: string;
@@ -99,9 +112,21 @@ export interface PublicRecentReport {
   make: string;
   model: string;
   year: number | null;
+  trim: TrimTier | null;
   mileage: number | null;
   exterior_condition: Condition;
   interior_condition: Condition;
+  tire_condition: TireCondition | null;
+  fuel_type: FuelType | null;
+  fuel_octane: FuelOctane | null;
+  ev_charging_speed: EvChargingSpeed | null;
+  fuel_level_percent: number | null;
+  lane_centering: boolean;
+  lane_departure_assist: boolean;
+  adaptive_cruise_control: boolean;
+  hands_free_driving: boolean;
+  license_plate: string | null;
+  license_plate_state: string | null;
   observed_date: string;
 }
 

@@ -2,7 +2,7 @@ import { Send } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
-import { countryNames } from "../../data/regions";
+import { allRegions, countryNames } from "../../data/regions";
 import { useAuth } from "../auth/authStore";
 import { isSupabaseConfigured, supabase, supabaseConfigError } from "../../lib/supabase";
 import type { Airport, CarMake, CarModel, RentalCompany } from "../../lib/types";
@@ -17,29 +17,82 @@ const conditions = [
   { value: "poor", label: "Poor" },
 ];
 
+const trimOptions = [
+  { value: "entry", label: "Entry" },
+  { value: "mid_tier", label: "Mid Tier" },
+  { value: "high_tier", label: "High Tier" },
+];
+
+const tireConditionOptions = [
+  { value: "brand_new", label: "Brand New" },
+  { value: "decent", label: "Decent" },
+  { value: "almost_bald", label: "Almost Bald" },
+];
+
+const fuelTypeOptions = [
+  { value: "gasoline", label: "Gasoline" },
+  { value: "phev", label: "Plug-In Hybrid" },
+  { value: "hybrid", label: "Traditional Hybrid" },
+  { value: "bev", label: "Battery Electric" },
+  { value: "hydrogen", label: "Hydrogen" },
+  { value: "diesel", label: "Diesel" },
+];
+
+const fuelOctaneOptions = [
+  { value: "regular", label: "Regular" },
+  { value: "midgrade", label: "Midgrade" },
+  { value: "premium", label: "Premium" },
+];
+
+const evChargingSpeedOptions = [
+  { value: "level_2", label: "Level 2" },
+  { value: "dcfc_150", label: "DCFC 150kW" },
+  { value: "dcfc_250", label: "DCFC 250kW" },
+  { value: "dcfc_350", label: "DCFC 350kW" },
+];
+
+const adasOptions: Array<{ key: "lane_centering" | "lane_departure_assist" | "adaptive_cruise_control" | "hands_free_driving"; label: string }> = [
+  { key: "lane_centering", label: "Lane centering" },
+  { key: "lane_departure_assist", label: "Lane departure assistance" },
+  { key: "adaptive_cruise_control", label: "Adaptive cruise control" },
+  { key: "hands_free_driving", label: "Hands-free self driving" },
+];
+
 interface SubmitReportFormProps {
   onSubmitted?: () => void;
 }
 
-const initialValues: Record<keyof ReportFormValues, string> = {
+type AdasKey = "lane_centering" | "lane_departure_assist" | "adaptive_cruise_control" | "hands_free_driving";
+
+type FormValues = Omit<Record<keyof ReportFormValues, string>, AdasKey> & Record<AdasKey, boolean>;
+
+const initialValues: FormValues = {
   airport_id: "",
   rental_company_id: "",
   make_id: "",
   model_id: "",
-  year: String(new Date().getFullYear()),
+  year: "",
   trim: "",
   mileage: "",
   exterior_condition: "good",
   interior_condition: "good",
-  fuel_or_battery_level: "",
-  notes: "",
-  photo_url: "",
+  tire_condition: "",
+  fuel_type: "",
+  fuel_octane: "",
+  ev_charging_speed: "",
+  fuel_level_percent: "",
+  lane_centering: false,
+  lane_departure_assist: false,
+  adaptive_cruise_control: false,
+  hands_free_driving: false,
+  license_plate: "",
+  license_plate_state: "",
   observed_at: new Date().toISOString().slice(0, 10),
 };
 
 export function SubmitReportForm({ onSubmitted }: SubmitReportFormProps) {
   const { user } = useAuth();
-  const [values, setValues] = useState(initialValues);
+  const [values, setValues] = useState<FormValues>(initialValues);
   const [airports, setAirports] = useState<Airport[]>([]);
   const [companies, setCompanies] = useState<RentalCompany[]>([]);
   const [makes, setMakes] = useState<CarMake[]>([]);
@@ -98,8 +151,16 @@ export function SubmitReportForm({ onSubmitted }: SubmitReportFormProps) {
       ...current,
       [key]: value,
       ...(key === "make_id" ? { model_id: "" } : {}),
+      ...(key === "fuel_type" ? { fuel_octane: "", ev_charging_speed: "" } : {}),
     }));
   };
+
+  const toggleAdas = (key: "lane_centering" | "lane_departure_assist" | "adaptive_cruise_control" | "hands_free_driving") => {
+    setValues((current) => ({ ...current, [key]: !current[key] }));
+  };
+
+  const showOctane = values.fuel_type === "gasoline" || values.fuel_type === "hybrid";
+  const showChargingSpeed = values.fuel_type === "bev" || values.fuel_type === "phev";
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -125,21 +186,32 @@ export function SubmitReportForm({ onSubmitted }: SubmitReportFormProps) {
 
     setSubmitting(true);
     const data = result.data;
+    const observedAt = data.observed_at
+      ? new Date(`${data.observed_at}T12:00:00`).toISOString()
+      : new Date().toISOString();
     const { error } = await supabase.from("vehicle_reports").insert({
       reporter_id: user.id,
       airport_id: data.airport_id,
       rental_company_id: data.rental_company_id,
       make_id: data.make_id,
       model_id: data.model_id,
-      year: data.year,
-      trim: data.trim || null,
-      mileage: data.mileage,
+      year: data.year ?? null,
+      trim: data.trim ?? null,
+      mileage: data.mileage ?? null,
       exterior_condition: data.exterior_condition,
       interior_condition: data.interior_condition,
-      fuel_or_battery_level: data.fuel_or_battery_level || null,
-      notes: data.notes || null,
-      photo_url: data.photo_url || null,
-      observed_at: new Date(`${data.observed_at}T12:00:00`).toISOString(),
+      tire_condition: data.tire_condition ?? null,
+      fuel_type: data.fuel_type ?? null,
+      fuel_octane: showOctane ? data.fuel_octane ?? null : null,
+      ev_charging_speed: showChargingSpeed ? data.ev_charging_speed ?? null : null,
+      fuel_level_percent: data.fuel_level_percent ?? null,
+      lane_centering: values.lane_centering,
+      lane_departure_assist: values.lane_departure_assist,
+      adaptive_cruise_control: values.adaptive_cruise_control,
+      hands_free_driving: values.hands_free_driving,
+      license_plate: data.license_plate || null,
+      license_plate_state: data.license_plate_state || null,
+      observed_at: observedAt,
     });
 
     if (error) {
@@ -151,6 +223,24 @@ export function SubmitReportForm({ onSubmitted }: SubmitReportFormProps) {
     }
     setSubmitting(false);
   };
+
+  const stateGroups = useMemo(
+    () => [
+      {
+        label: countryNames.US,
+        options: allRegions
+          .filter((region) => region.country === "US")
+          .map((region) => ({ value: region.code, label: region.name })),
+      },
+      {
+        label: countryNames.CA,
+        options: allRegions
+          .filter((region) => region.country === "CA")
+          .map((region) => ({ value: region.code, label: region.name })),
+      },
+    ],
+    [],
+  );
 
   if (!isSupabaseConfigured) {
     return (
@@ -211,30 +301,32 @@ export function SubmitReportForm({ onSubmitted }: SubmitReportFormProps) {
           options={filteredModels.map((model) => ({ value: model.id, label: model.name }))}
         />
         <InputField
-          label="Year"
+          label="Year (optional)"
           type="number"
           value={values.year}
           error={errors.year}
           onChange={(value) => update("year", value)}
         />
-        <InputField
-          label="Trim"
+        <SelectField
+          label="Trim (optional)"
           value={values.trim}
           error={errors.trim}
           onChange={(value) => update("trim", value)}
+          options={trimOptions}
         />
         <InputField
-          label="Mileage"
+          label="Mileage (optional)"
           type="number"
           value={values.mileage}
           error={errors.mileage}
           onChange={(value) => update("mileage", value)}
         />
         <InputField
-          label="Fuel or EV battery level"
-          value={values.fuel_or_battery_level}
-          error={errors.fuel_or_battery_level}
-          onChange={(value) => update("fuel_or_battery_level", value)}
+          label="Date observed (optional)"
+          type="date"
+          value={values.observed_at}
+          error={errors.observed_at}
+          onChange={(value) => update("observed_at", value)}
         />
         <SelectField
           label="Exterior condition"
@@ -250,30 +342,90 @@ export function SubmitReportForm({ onSubmitted }: SubmitReportFormProps) {
           onChange={(value) => update("interior_condition", value)}
           options={conditions}
         />
-        <InputField
-          label="Date observed"
-          type="date"
-          value={values.observed_at}
-          error={errors.observed_at}
-          onChange={(value) => update("observed_at", value)}
+        <SelectField
+          label="Tire condition (optional)"
+          value={values.tire_condition}
+          error={errors.tire_condition}
+          onChange={(value) => update("tire_condition", value)}
+          options={tireConditionOptions}
         />
-        <InputField
-          label="Photo URL"
-          value={values.photo_url}
-          error={errors.photo_url}
-          onChange={(value) => update("photo_url", value)}
+        <SelectField
+          label="Fuel type (optional)"
+          value={values.fuel_type}
+          error={errors.fuel_type}
+          onChange={(value) => update("fuel_type", value)}
+          options={fuelTypeOptions}
         />
+        {showOctane ? (
+          <SelectField
+            label="Fuel octane (optional)"
+            value={values.fuel_octane}
+            error={errors.fuel_octane}
+            onChange={(value) => update("fuel_octane", value)}
+            options={fuelOctaneOptions}
+          />
+        ) : null}
+        {showChargingSpeed ? (
+          <SelectField
+            label="Max charging speed (optional)"
+            value={values.ev_charging_speed}
+            error={errors.ev_charging_speed}
+            onChange={(value) => update("ev_charging_speed", value)}
+            options={evChargingSpeedOptions}
+          />
+        ) : null}
       </div>
 
       <label className="block space-y-1.5">
-        <span className="label">Notes</span>
-        <textarea
-          className="input min-h-28"
-          value={values.notes}
-          onChange={(event) => update("notes", event.target.value)}
+        <span className="label">
+          Fuel / battery level{values.fuel_level_percent ? `: ${values.fuel_level_percent}%` : " (optional)"}
+        </span>
+        <input
+          className="w-full accent-current"
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={values.fuel_level_percent || 0}
+          onChange={(event) => update("fuel_level_percent", event.target.value)}
         />
-        {errors.notes ? <span className="text-xs text-red-700">{errors.notes}</span> : null}
+        {errors.fuel_level_percent ? (
+          <span className="text-xs text-red-700">{errors.fuel_level_percent}</span>
+        ) : null}
       </label>
+
+      <fieldset className="space-y-2">
+        <legend className="label">Driver assistance features</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {adasOptions.map((option) => (
+            <label key={option.key} className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300"
+                checked={values[option.key]}
+                onChange={() => toggleAdas(option.key)}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <InputField
+          label="License plate (optional)"
+          value={values.license_plate}
+          error={errors.license_plate}
+          onChange={(value) => update("license_plate", value)}
+        />
+        <GroupedSelectField
+          label="License plate state/province (optional)"
+          value={values.license_plate_state}
+          error={errors.license_plate_state}
+          onChange={(value) => update("license_plate_state", value)}
+          groups={stateGroups}
+        />
+      </div>
 
       <button className="button-primary w-full sm:w-auto" type="submit" disabled={submitting}>
         <Send className="h-4 w-4" aria-hidden="true" />

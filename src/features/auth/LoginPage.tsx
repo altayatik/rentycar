@@ -51,18 +51,18 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-teal-50 via-slate-50 to-slate-50 px-4 py-10">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-indigo-50 via-slate-50 to-slate-50 px-4 py-10">
       <div className="w-full max-w-md">
         <Link
           to="/"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+          className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to RentyCar
         </Link>
 
         <Link to="/" className="mb-8 flex items-center justify-center gap-2 text-xl font-bold text-slate-950">
-          <span className="rounded-lg bg-teal-700 p-2 text-white">
+          <span className="rounded-lg bg-indigo-700 p-2 text-white">
             <CarFront className="h-5 w-5" aria-hidden="true" />
           </span>
           RentyCar
@@ -111,7 +111,7 @@ export function LoginPage() {
           </label>
 
           <button
-            className="button-primary w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+            className="button-primary w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700"
             type="submit"
             disabled={submitting}
           >

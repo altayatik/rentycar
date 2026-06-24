@@ -8,7 +8,7 @@ import {
   TrendingDown,
   Trophy,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { CarMakeBadge } from "../../components/CarMakeBadge";
 import { EmptyState } from "../../components/EmptyState";
@@ -24,7 +24,6 @@ import {
   NorthAmericaRegionMap,
   type SelectedRegion,
 } from "../../components/NorthAmericaRegionMap";
-import { ReportTable } from "../../components/ReportTable";
 import { StatCard } from "../../components/StatCard";
 import { fallbackAirportStats } from "../../data/fallbackAirports";
 import { formatDate, formatNumber } from "../../lib/formatters";
@@ -84,6 +83,7 @@ export function HomePage() {
     return recentReports.filter((report) => {
       const airportNeedle = filters.airportQuery.trim().toLowerCase();
       const companyNeedle = filters.companyQuery.trim().toLowerCase();
+      const plateNeedle = filters.licensePlateQuery.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
       const regionFilter = filters.region ? filters.region.split("-") : null;
       const mileageMin = filters.mileageMin ? Number(filters.mileageMin) : null;
       const mileageMax = filters.mileageMax ? Number(filters.mileageMax) : null;
@@ -95,6 +95,8 @@ export function HomePage() {
             normalizeText(airportNeedle),
           )) &&
         (!companyNeedle || normalizeText(report.rental_company_name).includes(normalizeText(companyNeedle))) &&
+        (!plateNeedle ||
+          (report.license_plate ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").includes(plateNeedle)) &&
         (!filters.country || report.airport_country === filters.country) &&
         (!regionFilter ||
           (report.airport_country === regionFilter[0] && report.airport_region_code === regionFilter[1])) &&
@@ -195,47 +197,44 @@ export function HomePage() {
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-panel sm:p-8">
-        <div
-          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-teal-100 opacity-60 blur-3xl"
-          aria-hidden="true"
-        />
-        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
-          <div>
-            <p className="inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-normal text-teal-700">
-              <Sparkles className="h-4 w-4" aria-hidden="true" />
-              RentyCar
-            </p>
-            <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-tight text-slate-950 sm:text-5xl">
-              Real rental car sightings from airport lots.
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-indigo-950 via-slate-900 to-rose-950 px-5 py-4 shadow-panel sm:px-6">
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="h-5 w-5 text-amber-300" aria-hidden="true" />
+            <h1 className="text-lg font-semibold leading-tight text-white sm:text-xl">
+              RentyCar — real rental car sightings from airport lots.
             </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-              RentyCar is a fun community-style experiment for tracking the actual cars people see at
-              rental counters — make, model, mileage, condition, airport, and company.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <a className="button-primary" href="#reports">
-                View public reports
-              </a>
-              <Link className="button-secondary" to="/login">
-                Sign in if assigned
-              </Link>
-            </div>
-            {!isSupabaseConfigured ? (
-              <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                Supabase is not configured yet, so the atlas is showing fallback US and Canada airport regions.
-              </div>
-            ) : null}
           </div>
-          <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5">
-            <p className="text-sm font-semibold text-teal-900">Early access note</p>
-            <p className="mt-2 text-sm leading-6 text-teal-900/80">
-              Public browsing is open to everyone. There's no public sign-up yet — report submission
-              is limited to manually assigned tester accounts while the project is still taking shape.
-            </p>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <a className="button-primary bg-amber-500 hover:bg-amber-400" href="#reports">
+              View public reports
+            </a>
+            <Link className="button-secondary border-white/30 bg-white/10 text-white hover:bg-white/20" to="/login">
+              Sign in if assigned
+            </Link>
           </div>
         </div>
+        {!isSupabaseConfigured ? (
+          <div className="relative mt-3 rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-xs text-amber-100">
+            Supabase is not configured yet, so the atlas is showing fallback US and Canada airport regions.
+          </div>
+        ) : null}
       </section>
+
+      <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs leading-5 text-rose-900 sm:text-sm">
+        Public browsing is open to everyone. There's no public sign-up yet — report submission is limited
+        to manually assigned tester accounts while the project is still taking shape.
+      </p>
+
+      <FilterBar
+        filters={filters}
+        airports={filterOptions.airports}
+        companies={filterOptions.companies}
+        regions={filterOptions.regions}
+        makes={filterOptions.makes}
+        models={filterOptions.models}
+        onChange={setFilters}
+      />
 
       <NorthAmericaRegionMap
         airports={airportStats}
@@ -256,26 +255,31 @@ export function HomePage() {
             label="Total reports"
             value={formatNumber(totalReports)}
             icon={<ClipboardList className="h-5 w-5" aria-hidden="true" />}
+            tone="indigo"
           />
           <StatCard
             label="Airport lots covered"
             value={formatNumber(airportsCovered)}
             icon={<MapPin className="h-5 w-5" aria-hidden="true" />}
+            tone="sky"
           />
           <StatCard
             label="Rental companies covered"
             value={formatNumber(companyCount)}
             icon={<Building2 className="h-5 w-5" aria-hidden="true" />}
+            tone="violet"
           />
           <StatCard
             label="Regions reporting (US + Canada)"
             value={formatNumber(usRegionsCovered + canadaRegionsCovered)}
             icon={<Map className="h-5 w-5" aria-hidden="true" />}
+            tone="rose"
           />
           <StatCard
             label="Most spotted make"
             value={mostReportedMake ?? "Not enough data yet"}
             icon={<Trophy className="h-5 w-5" aria-hidden="true" />}
+            tone="amber"
           />
           <StatCard
             label="Lowest mileage sighting"
@@ -285,6 +289,7 @@ export function HomePage() {
                 : "Not enough data yet"
             }
             icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
+            tone="teal"
           />
           <StatCard
             label="Most active airport"
@@ -294,6 +299,7 @@ export function HomePage() {
                 : "Not enough data yet"
             }
             icon={<MapPin className="h-5 w-5" aria-hidden="true" />}
+            tone="sky"
           />
           <StatCard
             label="Newest report"
@@ -303,36 +309,16 @@ export function HomePage() {
                 : "Not enough data yet"
             }
             icon={<Sparkles className="h-5 w-5" aria-hidden="true" />}
+            tone="amber"
           />
           <StatCard
             label="Average reported mileage"
             value={averageMileage !== null ? `${formatNumber(averageMileage)} mi` : "Not enough data yet"}
             icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
+            tone="indigo"
           />
         </div>
       </section>
-
-      <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-panel sm:p-8 lg:grid-cols-[auto_1fr] lg:items-center">
-        <CarMakeBadge make={mostReportedMake ?? "RentyCar"} size="lg" />
-        <div>
-          <h2 className="text-xl font-semibold text-slate-950">The "or similar" decoder</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
-            Rental listings love the phrase "Toyota Camry or similar." RentyCar exists so you can see
-            what "or similar" has actually turned out to mean at real airports, based on what people
-            report after picking up their keys.
-          </p>
-        </div>
-      </section>
-
-      <FilterBar
-        filters={filters}
-        airports={filterOptions.airports}
-        companies={filterOptions.companies}
-        regions={filterOptions.regions}
-        makes={filterOptions.makes}
-        models={filterOptions.models}
-        onChange={setFilters}
-      />
 
       <section id="reports" className="space-y-4 scroll-mt-24">
         <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
@@ -348,7 +334,7 @@ export function HomePage() {
         {loading ? (
           <LoadingState label="Loading public reports" />
         ) : recentReports.length && filteredReports.length ? (
-          <ReportTable reports={filteredReports} />
+          <AutoScrollFeed reports={filteredReports} />
         ) : selectedRegion ? (
           <EmptyState
             title={`No reports for ${selectedRegion.regionName}`}
@@ -361,6 +347,70 @@ export function HomePage() {
           />
         )}
       </section>
+    </div>
+  );
+}
+
+const FEED_ROW_HEIGHT = 76;
+const FEED_VISIBLE_ROWS = 5;
+
+function AutoScrollFeed({ reports }: { reports: PublicRecentReport[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pausedRef = useRef(false);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node || reports.length <= FEED_VISIBLE_ROWS) return;
+
+    let frame: number;
+    const tick = () => {
+      if (!pausedRef.current) {
+        node.scrollTop += 0.4;
+        const loopPoint = node.scrollHeight / 2;
+        if (node.scrollTop >= loopPoint) {
+          node.scrollTop -= loopPoint;
+        }
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [reports.length]);
+
+  const loopedReports = reports.length > FEED_VISIBLE_ROWS ? [...reports, ...reports] : reports;
+
+  return (
+    <div
+      ref={containerRef}
+      onMouseEnter={() => (pausedRef.current = true)}
+      onMouseLeave={() => (pausedRef.current = false)}
+      className="overflow-y-hidden rounded-2xl border border-slate-200 bg-white shadow-panel"
+      style={{ height: FEED_ROW_HEIGHT * FEED_VISIBLE_ROWS }}
+    >
+      <ul className="divide-y divide-slate-100">
+        {loopedReports.map((report, index) => (
+          <li
+            key={`${report.airport_code}-${report.model}-${report.observed_date}-${index}`}
+            className="flex items-center gap-3 px-4 py-3 sm:px-5"
+            style={{ height: FEED_ROW_HEIGHT }}
+          >
+            <CarMakeBadge make={report.make} size="md" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-950">
+                {report.year ? `${report.year} ` : ""}
+                {report.make} {report.model}
+              </p>
+              <p className="truncate text-xs text-slate-500">
+                {report.rental_company_name} at {report.airport_code}
+              </p>
+            </div>
+            <div className="hidden text-right text-xs text-slate-500 sm:block">
+              <p>{formatNumber(report.mileage)} mi</p>
+              <p>{formatDate(report.observed_date)}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

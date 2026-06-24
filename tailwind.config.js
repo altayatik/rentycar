@@ -5,7 +5,7 @@ export default {
     extend: {
       colors: {
         ink: "#15202b",
-        runway: "#0f766e",
+        runway: "#4338ca",
         asphalt: "#334155",
       },
       boxShadow: {

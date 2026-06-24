@@ -1,8 +1,8 @@
-import { Building2, MapPin, StickyNote } from "lucide-react";
+import { Building2, MapPin } from "lucide-react";
 import { CarMakeBadge } from "./CarMakeBadge";
 import { EmptyState } from "./EmptyState";
-import { formatCondition, formatDate, formatNumber } from "../lib/formatters";
-import type { Condition, MyReportRow, PublicRecentReport } from "../lib/types";
+import { formatCondition, formatDate, formatNumber, formatTireCondition } from "../lib/formatters";
+import type { Condition, MyReportRow, PublicRecentReport, TireCondition } from "../lib/types";
 
 type ReportRow = PublicRecentReport | MyReportRow;
 
@@ -13,7 +13,7 @@ interface ReportTableProps {
 
 const conditionStyles: Record<Condition, string> = {
   excellent: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  good: "bg-teal-100 text-teal-800 border-teal-200",
+  good: "bg-sky-100 text-sky-800 border-sky-200",
   fair: "bg-amber-100 text-amber-800 border-amber-200",
   poor: "bg-red-100 text-red-800 border-red-200",
 };
@@ -56,7 +56,7 @@ export function ReportTable({ reports, mode = "public" }: ReportTableProps) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.map(({ row, index }) => (
-                <tr key={`${row.airport}-${row.model}-${row.observed}-${index}`} className="transition hover:bg-teal-50/40">
+                <tr key={`${row.airport}-${row.model}-${row.observed}-${index}`} className="transition hover:bg-indigo-50/40">
                   <td className="whitespace-nowrap px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <CarMakeBadge make={row.make} size="sm" />
@@ -133,11 +133,20 @@ function ReportCard({ row, mode }: { row: NormalizedReport; mode: "public" | "pr
         <ConditionPill condition={row.interior} />
       </div>
 
-      {row.notes ? (
-        <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-slate-50 p-2.5 text-xs leading-5 text-slate-600">
-          <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
-          {row.notes}
-        </p>
+      {row.tireCondition || row.licensePlate ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {row.tireCondition ? (
+            <span className="text-xs font-medium text-slate-500">
+              Tires: {formatTireCondition(row.tireCondition)}
+            </span>
+          ) : null}
+          {row.licensePlate ? (
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+              {row.licensePlateState ? `${row.licensePlateState} · ` : ""}
+              {row.licensePlate}
+            </span>
+          ) : null}
+        </div>
       ) : null}
 
       <p className="mt-3 text-xs font-medium text-slate-400">
@@ -157,7 +166,9 @@ interface NormalizedReport {
   exterior: Condition | null | undefined;
   interior: Condition | null | undefined;
   observed: string;
-  notes?: string | null;
+  tireCondition?: TireCondition | null;
+  licensePlate?: string | null;
+  licensePlateState?: string | null;
 }
 
 function normalizeReport(report: ReportRow): NormalizedReport {
@@ -172,6 +183,9 @@ function normalizeReport(report: ReportRow): NormalizedReport {
       exterior: report.exterior_condition,
       interior: report.interior_condition,
       observed: report.observed_date,
+      tireCondition: report.tire_condition,
+      licensePlate: report.license_plate,
+      licensePlateState: report.license_plate_state,
     };
   }
 
@@ -185,6 +199,8 @@ function normalizeReport(report: ReportRow): NormalizedReport {
     exterior: report.exterior_condition,
     interior: report.interior_condition,
     observed: report.observed_at,
-    notes: report.notes,
+    tireCondition: report.tire_condition,
+    licensePlate: report.license_plate,
+    licensePlateState: report.license_plate_state,
   };
 }

@@ -135,11 +135,11 @@ export function NorthAmericaRegionMap({
         <div className="min-w-0 bg-[#fbf6e8] p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-normal text-teal-700">Region atlas</p>
+              <p className="text-xs font-semibold uppercase tracking-normal text-indigo-700">Region atlas</p>
               <h2 className="text-xl font-semibold text-slate-950">US and Canada report density</h2>
             </div>
             <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-600">
-              <MousePointer2 className="h-3.5 w-3.5 text-teal-700" aria-hidden="true" />
+              <MousePointer2 className="h-3.5 w-3.5 text-indigo-700" aria-hidden="true" />
               Hover or click a region
             </div>
           </div>
@@ -172,9 +172,9 @@ export function NorthAmericaRegionMap({
           <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-medium text-slate-600">
             <span>Report density</span>
             <LegendSwatch className="bg-slate-100" label="None" />
-            <LegendSwatch className="bg-teal-100" label="Low" />
-            <LegendSwatch className="bg-teal-300" label="Medium" />
-            <LegendSwatch className="bg-teal-600" label="High" />
+            <LegendSwatch className="bg-indigo-100" label="Low" />
+            <LegendSwatch className="bg-indigo-300" label="Medium" />
+            <LegendSwatch className="bg-indigo-600" label="High" />
           </div>
         </div>
 
@@ -210,7 +210,7 @@ export function NorthAmericaRegionMap({
             </div>
           ) : null}
 
-          <div className="mt-6 rounded-xl border border-teal-100 bg-teal-50 p-4 text-sm text-teal-900">
+          <div className="mt-6 rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900">
             <div className="flex items-center gap-2 font-semibold">
               <MapPinned className="h-4 w-4" aria-hidden="true" />
               Regional filter
@@ -349,9 +349,9 @@ function latestDate(left: string | null, right: string | null) {
 function getRegionFill(reportCount: number, maxReports: number) {
   if (reportCount <= 0) return "#f1f5f9";
   const intensity = reportCount / maxReports;
-  if (intensity > 0.66) return "#0f766e";
-  if (intensity > 0.33) return "#5eead4";
-  return "#ccfbf1";
+  if (intensity > 0.66) return "#4338ca";
+  if (intensity > 0.33) return "#a5b4fc";
+  return "#e0e7ff";
 }
 
 function Detail({ label, value }: { label: string; value: string }) {

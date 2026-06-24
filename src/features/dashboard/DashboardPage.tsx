@@ -49,7 +49,7 @@ export function DashboardPage() {
     <div className="space-y-8">
       <section className="panel flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-normal text-teal-700">Dashboard</p>
+          <p className="text-sm font-semibold uppercase tracking-normal text-indigo-700">Dashboard</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-950">
             Welcome{profile?.username ? `, ${profile.username}` : ""}
           </h1>

@@ -5,6 +5,7 @@ import type { Condition, CountryCode } from "../lib/types";
 export interface ReportFilters {
   airportQuery: string;
   companyQuery: string;
+  licensePlateQuery: string;
   country: "" | CountryCode;
   region: string;
   make: string;
@@ -45,6 +46,7 @@ const conditionOptions: Array<{ value: Condition; label: string }> = [
 export const emptyReportFilters: ReportFilters = {
   airportQuery: "",
   companyQuery: "",
+  licensePlateQuery: "",
   country: "",
   region: "",
   make: "",
@@ -80,7 +82,7 @@ export function FilterBar({
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <Search className="h-4 w-4 text-teal-700" aria-hidden="true" />
+            <Search className="h-4 w-4 text-indigo-700" aria-hidden="true" />
             Search reports
           </div>
           <p className="mt-1 text-xs text-slate-500">Start with an airport or rental company.</p>
@@ -91,7 +93,7 @@ export function FilterBar({
         </button>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_220px_180px]">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.85fr)_190px_160px]">
         <label className="space-y-1.5">
           <span className="label">Airport</span>
           <input
@@ -127,6 +129,16 @@ export function FilterBar({
               <option key={company} value={company} />
             ))}
           </datalist>
+        </label>
+
+        <label className="space-y-1.5">
+          <span className="label">License plate</span>
+          <input
+            className="input uppercase placeholder:normal-case"
+            placeholder="Search plate number"
+            value={filters.licensePlateQuery}
+            onChange={(event) => update("licensePlateQuery", event.target.value)}
+          />
         </label>
 
         <label className="space-y-1.5">

@@ -107,12 +107,75 @@ create table if not exists public.vehicle_reports (
   deleted_at timestamptz
 );
 
+-- Added for: ADAS option boxes, fuel type/octane/EV charging speed, tire condition,
+-- optional license plate + state, and a 0-100 fuel/battery level slider.
+alter table public.vehicle_reports add column if not exists lane_centering boolean not null default false;
+alter table public.vehicle_reports add column if not exists lane_departure_assist boolean not null default false;
+alter table public.vehicle_reports add column if not exists adaptive_cruise_control boolean not null default false;
+alter table public.vehicle_reports add column if not exists hands_free_driving boolean not null default false;
+alter table public.vehicle_reports add column if not exists fuel_type text;
+alter table public.vehicle_reports add column if not exists fuel_octane text;
+alter table public.vehicle_reports add column if not exists ev_charging_speed text;
+alter table public.vehicle_reports add column if not exists fuel_level_percent int;
+alter table public.vehicle_reports add column if not exists tire_condition text;
+alter table public.vehicle_reports add column if not exists license_plate text;
+alter table public.vehicle_reports add column if not exists license_plate_state text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'vehicle_reports_fuel_type_check' and conrelid = 'public.vehicle_reports'::regclass
+  ) then
+    alter table public.vehicle_reports
+    add constraint vehicle_reports_fuel_type_check
+    check (fuel_type is null or fuel_type in ('gasoline', 'phev', 'hybrid', 'bev', 'hydrogen', 'diesel'));
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'vehicle_reports_fuel_octane_check' and conrelid = 'public.vehicle_reports'::regclass
+  ) then
+    alter table public.vehicle_reports
+    add constraint vehicle_reports_fuel_octane_check
+    check (fuel_octane is null or fuel_octane in ('regular', 'midgrade', 'premium'));
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'vehicle_reports_ev_charging_speed_check' and conrelid = 'public.vehicle_reports'::regclass
+  ) then
+    alter table public.vehicle_reports
+    add constraint vehicle_reports_ev_charging_speed_check
+    check (ev_charging_speed is null or ev_charging_speed in ('level_2', 'dcfc_150', 'dcfc_250', 'dcfc_350'));
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'vehicle_reports_fuel_level_percent_check' and conrelid = 'public.vehicle_reports'::regclass
+  ) then
+    alter table public.vehicle_reports
+    add constraint vehicle_reports_fuel_level_percent_check
+    check (fuel_level_percent is null or (fuel_level_percent >= 0 and fuel_level_percent <= 100));
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'vehicle_reports_tire_condition_check' and conrelid = 'public.vehicle_reports'::regclass
+  ) then
+    alter table public.vehicle_reports
+    add constraint vehicle_reports_tire_condition_check
+    check (tire_condition is null or tire_condition in ('brand_new', 'decent', 'almost_bald'));
+  end if;
+end $$;
+
 create index if not exists vehicle_reports_airport_id_idx on public.vehicle_reports(airport_id);
 create index if not exists vehicle_reports_rental_company_id_idx on public.vehicle_reports(rental_company_id);
 create index if not exists vehicle_reports_make_id_idx on public.vehicle_reports(make_id);
 create index if not exists vehicle_reports_model_id_idx on public.vehicle_reports(model_id);
 create index if not exists vehicle_reports_observed_at_idx on public.vehicle_reports(observed_at);
 create index if not exists vehicle_reports_deleted_at_idx on public.vehicle_reports(deleted_at);
+create index if not exists vehicle_reports_license_plate_idx on public.vehicle_reports(upper(license_plate));
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -315,9 +378,21 @@ select
   cm.name as make,
   cmo.name as model,
   vr.year,
+  vr.trim,
   vr.mileage,
   vr.exterior_condition,
   vr.interior_condition,
+  vr.tire_condition,
+  vr.fuel_type,
+  vr.fuel_octane,
+  vr.ev_charging_speed,
+  vr.fuel_level_percent,
+  vr.lane_centering,
+  vr.lane_departure_assist,
+  vr.adaptive_cruise_control,
+  vr.hands_free_driving,
+  vr.license_plate,
+  vr.license_plate_state,
   vr.observed_at as observed_date
 from public.vehicle_reports vr
 join public.airports a on a.id = vr.airport_id

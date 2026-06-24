@@ -9,10 +9,10 @@ export function Footer() {
           airport, automaker, or travel provider.
         </p>
         <nav className="flex gap-4 font-medium">
-          <Link className="text-slate-600 transition hover:text-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700" to="/about">
+          <Link className="text-slate-600 transition hover:text-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700" to="/about">
             About
           </Link>
-          <Link className="text-slate-600 transition hover:text-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700" to="/legal">
+          <Link className="text-slate-600 transition hover:text-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700" to="/legal">
             Legal
           </Link>
         </nav>

@@ -89,7 +89,7 @@ export function AdminPage() {
     <div className="space-y-6">
       <section className="panel flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-normal text-teal-700">Admin</p>
+          <p className="text-sm font-semibold uppercase tracking-normal text-indigo-700">Admin</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-950">RentyCar operations</h1>
           <p className="mt-2 max-w-2xl text-slate-600">
             Manage reference data and moderate submitted rental car reports.
@@ -108,7 +108,7 @@ export function AdminPage() {
           <button
             key={item.id}
             className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${
-              tab === item.id ? "bg-teal-700 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+              tab === item.id ? "bg-indigo-700 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
             }`}
             type="button"
             onClick={() => setTab(item.id)}
@@ -567,7 +567,7 @@ function ActiveToggle({
   return (
     <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
       <input
-        className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600"
+        className="h-4 w-4 rounded border-slate-300 text-indigo-700 focus:ring-indigo-600"
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
@@ -592,7 +592,7 @@ function AdminTable({ headers, rows }: { headers: string[]; rows: Array<Array<Re
         </thead>
         <tbody className="divide-y divide-slate-100">
           {rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="transition hover:bg-teal-50/40">
+            <tr key={rowIndex} className="transition hover:bg-indigo-50/40">
               {row.map((cell, cellIndex) => (
                 <td key={cellIndex} className="whitespace-nowrap px-4 py-3 text-slate-700">
                   {cell}
