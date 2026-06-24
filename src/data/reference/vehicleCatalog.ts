@@ -1,0 +1,41 @@
+export interface VehicleMakeReference {
+  make: string;
+  models: string[];
+}
+
+export const vehicleCatalog: VehicleMakeReference[] = [
+  { make: "Acura", models: ["ILX", "Integra", "TLX", "RDX", "MDX"] },
+  { make: "Alfa Romeo", models: ["Giulia", "Stelvio", "Tonale"] },
+  { make: "Audi", models: ["A3", "A4", "A5", "A6", "Q3", "Q5", "Q7", "Q8", "e-tron"] },
+  { make: "BMW", models: ["2 Series", "3 Series", "4 Series", "5 Series", "X1", "X2", "X3", "X5", "X7", "i4"] },
+  { make: "Buick", models: ["Encore", "Encore GX", "Envision", "Enclave"] },
+  { make: "Cadillac", models: ["CT4", "CT5", "XT4", "XT5", "XT6", "Escalade", "Lyriq"] },
+  { make: "Chevrolet", models: ["Spark", "Malibu", "Trax", "Trailblazer", "Equinox", "Blazer", "Traverse", "Tahoe", "Suburban", "Silverado", "Colorado", "Camaro", "Corvette"] },
+  { make: "Chrysler", models: ["300", "Pacifica", "Voyager"] },
+  { make: "Dodge", models: ["Charger", "Challenger", "Hornet", "Durango", "Grand Caravan"] },
+  { make: "Fiat", models: ["500", "500X", "124 Spider"] },
+  { make: "Ford", models: ["Mustang", "Escape", "Bronco Sport", "Bronco", "Edge", "Explorer", "Expedition", "F-150", "Ranger", "Maverick", "Transit"] },
+  { make: "Genesis", models: ["G70", "G80", "GV70", "GV80"] },
+  { make: "GMC", models: ["Terrain", "Acadia", "Yukon", "Canyon", "Sierra"] },
+  { make: "Honda", models: ["Civic", "Accord", "HR-V", "CR-V", "Passport", "Pilot", "Odyssey", "Ridgeline"] },
+  { make: "Hyundai", models: ["Venue", "Elantra", "Sonata", "Kona", "Tucson", "Santa Fe", "Palisade", "Ioniq 5"] },
+  { make: "Infiniti", models: ["Q50", "QX50", "QX55", "QX60", "QX80"] },
+  { make: "Jeep", models: ["Renegade", "Compass", "Cherokee", "Grand Cherokee", "Wagoneer", "Grand Wagoneer", "Wrangler", "Gladiator"] },
+  { make: "Kia", models: ["Rio", "Forte", "K4", "K5", "Soul", "Seltos", "Sportage", "Sorento", "Telluride", "Carnival", "EV6"] },
+  { make: "Land Rover", models: ["Discovery Sport", "Range Rover Evoque", "Range Rover Velar", "Range Rover Sport"] },
+  { make: "Lexus", models: ["ES", "IS", "NX", "RX", "GX", "TX"] },
+  { make: "Lincoln", models: ["Corsair", "Nautilus", "Aviator", "Navigator"] },
+  { make: "Mazda", models: ["Mazda3", "Mazda6", "CX-30", "CX-5", "CX-50", "CX-9", "CX-90", "MX-5 Miata"] },
+  { make: "Mercedes-Benz", models: ["A-Class", "C-Class", "E-Class", "CLA", "GLA", "GLB", "GLC", "GLE", "GLS", "EQB", "EQE"] },
+  { make: "Mini", models: ["Cooper", "Clubman", "Countryman"] },
+  { make: "Mitsubishi", models: ["Mirage", "Outlander Sport", "Eclipse Cross", "Outlander"] },
+  { make: "Nissan", models: ["Versa", "Sentra", "Altima", "Maxima", "Kicks", "Rogue", "Murano", "Pathfinder", "Armada", "Frontier"] },
+  { make: "Polestar", models: ["2", "3"] },
+  { make: "Porsche", models: ["Macan", "Cayenne", "Panamera", "Taycan", "911"] },
+  { make: "Ram", models: ["1500", "2500", "ProMaster", "ProMaster City"] },
+  { make: "Subaru", models: ["Impreza", "Legacy", "Crosstrek", "Forester", "Outback", "Ascent"] },
+  { make: "Tesla", models: ["Model 3", "Model Y", "Model S", "Model X", "Cybertruck"] },
+  { make: "Toyota", models: ["Corolla", "Camry", "Crown", "Prius", "RAV4", "Highlander", "4Runner", "Sienna", "Tacoma", "Tundra", "Sequoia", "Venza"] },
+  { make: "Volkswagen", models: ["Jetta", "Passat", "Arteon", "Taos", "Tiguan", "Atlas", "ID.4"] },
+  { make: "Volvo", models: ["S60", "S90", "XC40", "XC60", "XC90", "C40 Recharge"] },
+];
