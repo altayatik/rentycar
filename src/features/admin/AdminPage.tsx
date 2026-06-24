@@ -3,7 +3,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
-import { formatCondition, formatDate, formatNumber } from "../../lib/formatters";
+import { formatCondition, formatDate, formatMileage } from "../../lib/formatters";
 import { supabase } from "../../lib/supabase";
 import type { Airport, CarMake, CarModel, MyReportRow, RentalCompany, RentalCompanyType } from "../../lib/types";
 
@@ -517,7 +517,7 @@ function ReportManager({ reports, onChanged }: { reports: MyReportRow[]; onChang
             report.airports?.iata_code ?? "Unknown",
             report.rental_companies?.name ?? "Unknown",
             `${report.year ?? ""} ${report.car_makes?.name ?? "Unknown"} ${report.car_models?.name ?? ""}`.trim(),
-            formatNumber(report.mileage),
+            formatMileage(report.mileage),
             `${formatCondition(report.exterior_condition)} / ${formatCondition(report.interior_condition)}`,
             formatDate(report.observed_at),
             report.deleted_at ? formatDate(report.deleted_at) : "No",

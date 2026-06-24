@@ -15,6 +15,12 @@ interface NorthAmericaRegionMapProps {
   regions?: PublicRegionStats[];
   selectedRegion: SelectedRegion | null;
   onSelectRegion: (region: SelectedRegion | null) => void;
+  allRegionsTotals?: {
+    reportCount: number;
+    airportCount: number;
+    rentalCompanyCount: number;
+    latestReportDate: string | null;
+  };
 }
 
 interface RegionStats {
@@ -120,13 +126,18 @@ export function NorthAmericaRegionMap({
   regions = [],
   selectedRegion,
   onSelectRegion,
+  allRegionsTotals,
 }: NorthAmericaRegionMapProps) {
   const [hoveredRegion, setHoveredRegion] = useState<SelectedRegion | null>(null);
   const regionStats = useMemo(() => buildRegionStats(airports, regions), [airports, regions]);
+  const allRegionsStats = useMemo(
+    () => allRegionsTotals ?? aggregateRegionStats(regionStats),
+    [allRegionsTotals, regionStats],
+  );
   const activeRegion = hoveredRegion ?? selectedRegion;
   const activeStats = activeRegion
     ? regionStats.get(regionKey(activeRegion.country, activeRegion.regionCode))
-    : null;
+    : allRegionsStats;
   const maxReports = Math.max(1, ...Array.from(regionStats.values()).map((stats) => stats.reportCount));
 
   return (
@@ -186,7 +197,7 @@ export function NorthAmericaRegionMap({
                 {activeRegion?.regionName ?? "All regions"}
               </h3>
               <p className="mt-1 text-sm text-slate-500">
-                {activeRegion ? countryNames[activeRegion.country] : "Click a state, province, or territory."}
+                {activeRegion ? countryNames[activeRegion.country] : "Totals across the US and Canada."}
               </p>
             </div>
             {selectedRegion ? (
@@ -217,6 +228,10 @@ export function NorthAmericaRegionMap({
             </div>
             <p className="mt-2">
               Selecting a region filters the public report table and focuses airport searches on that area.
+            </p>
+            <p className="mt-2 text-indigo-700/80">
+              This is the rental pickup location's state or province — not the vehicle's license plate
+              state. Rental fleet cars aren't always plated in the state they're rented from.
             </p>
           </div>
         </aside>
@@ -338,6 +353,31 @@ function buildRegionStats(airports: PublicAirportStats[], regions: PublicRegionS
   }
 
   return stats;
+}
+
+function aggregateRegionStats(regionStats: Map<string, RegionStats>): RegionStats {
+  let airportCount = 0;
+  let reportCount = 0;
+  let rentalCompanyCount = 0;
+  let latestReportDate: string | null = null;
+
+  for (const stats of regionStats.values()) {
+    airportCount += stats.airportCount;
+    reportCount += stats.reportCount;
+    rentalCompanyCount += stats.rentalCompanyCount;
+    latestReportDate = latestDate(latestReportDate, stats.latestReportDate);
+  }
+
+  return {
+    country: "US",
+    regionCode: "ALL",
+    regionName: "All regions",
+    airportCount,
+    reportCount,
+    rentalCompanyCount,
+    averageMileage: null,
+    latestReportDate,
+  };
 }
 
 function latestDate(left: string | null, right: string | null) {

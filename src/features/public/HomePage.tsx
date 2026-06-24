@@ -26,11 +26,13 @@ import {
 } from "../../components/NorthAmericaRegionMap";
 import { StatCard } from "../../components/StatCard";
 import { fallbackAirportStats } from "../../data/fallbackAirports";
-import { formatDate, formatNumber } from "../../lib/formatters";
+import { formatDate, formatMileage, formatNumber } from "../../lib/formatters";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import { useAuth } from "../auth/authStore";
 import type { PublicAirportStats, PublicRecentReport, PublicRegionStats } from "../../lib/types";
 
 export function HomePage() {
+  const { user } = useAuth();
   const [airportStats, setAirportStats] = useState<PublicAirportStats[]>(fallbackAirportStats);
   const [regionStats, setRegionStats] = useState<PublicRegionStats[]>([]);
   const [recentReports, setRecentReports] = useState<PublicRecentReport[]>([]);
@@ -169,11 +171,17 @@ export function HomePage() {
     return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   }, [recentReports]);
 
-  const lowestMileageSighting = useMemo(() => {
-    const withMileage = recentReports.filter((report) => typeof report.mileage === "number");
-    if (!withMileage.length) return null;
-    return withMileage.reduce((lowest, report) =>
-      (report.mileage ?? Infinity) < (lowest.mileage ?? Infinity) ? report : lowest,
+  const newestCar = useMemo(() => {
+    const withYear = recentReports.filter((report) => typeof report.year === "number");
+    if (!withYear.length) return null;
+    return withYear.reduce((newest, report) => ((report.year ?? 0) > (newest.year ?? 0) ? report : newest));
+  }, [recentReports]);
+
+  const oldestCar = useMemo(() => {
+    const withYear = recentReports.filter((report) => typeof report.year === "number");
+    if (!withYear.length) return null;
+    return withYear.reduce((oldest, report) =>
+      (report.year ?? Infinity) < (oldest.year ?? Infinity) ? report : oldest,
     );
   }, [recentReports]);
 
@@ -188,40 +196,39 @@ export function HomePage() {
     );
   }, [recentReports]);
 
-  const averageMileage = useMemo(() => {
-    const withMileage = recentReports.filter((report) => typeof report.mileage === "number");
-    if (!withMileage.length) return null;
-    const total = withMileage.reduce((sum, report) => sum + (report.mileage ?? 0), 0);
-    return Math.round(total / withMileage.length);
-  }, [recentReports]);
-
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-indigo-950 via-slate-900 to-rose-950 px-5 py-4 shadow-panel sm:px-6">
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-panel sm:px-6">
         <div className="relative flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <Sparkles className="h-5 w-5 text-amber-300" aria-hidden="true" />
-            <h1 className="text-lg font-semibold leading-tight text-white sm:text-xl">
+            <Sparkles className="h-5 w-5 text-indigo-600" aria-hidden="true" />
+            <h1 className="text-lg font-semibold leading-tight text-slate-950 sm:text-xl">
               RentyCar — real rental car sightings from airport lots.
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
-            <a className="button-primary bg-amber-500 hover:bg-amber-400" href="#reports">
+            <a className="button-primary" href="#reports">
               View public reports
             </a>
-            <Link className="button-secondary border-white/30 bg-white/10 text-white hover:bg-white/20" to="/login">
-              Sign in if assigned
-            </Link>
+            {user ? (
+              <Link className="button-secondary" to="/dashboard">
+                Go to dashboard
+              </Link>
+            ) : (
+              <Link className="button-secondary" to="/login">
+                Sign in if assigned
+              </Link>
+            )}
           </div>
         </div>
         {!isSupabaseConfigured ? (
-          <div className="relative mt-3 rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-xs text-amber-100">
+          <div className="relative mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
             Supabase is not configured yet, so the atlas is showing fallback US and Canada airport regions.
           </div>
         ) : null}
       </section>
 
-      <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs leading-5 text-rose-900 sm:text-sm">
+      <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs leading-5 text-slate-600 sm:text-sm">
         Public browsing is open to everyone. There's no public sign-up yet — report submission is limited
         to manually assigned tester accounts while the project is still taking shape.
       </p>
@@ -241,6 +248,12 @@ export function HomePage() {
         regions={regionStats}
         selectedRegion={selectedRegion}
         onSelectRegion={setSelectedRegion}
+        allRegionsTotals={{
+          reportCount: totalReports,
+          airportCount: airportsCovered,
+          rentalCompanyCount: companyCount,
+          latestReportDate: newestReport?.observed_date ?? null,
+        }}
       />
 
       {error ? <ErrorState message={error} /> : null}
@@ -282,13 +295,9 @@ export function HomePage() {
             tone="amber"
           />
           <StatCard
-            label="Lowest mileage sighting"
-            value={
-              lowestMileageSighting
-                ? `${formatNumber(lowestMileageSighting.mileage)} mi · ${lowestMileageSighting.make} ${lowestMileageSighting.model}`
-                : "Not enough data yet"
-            }
-            icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
+            label="Newest car"
+            value={newestCar ? `${newestCar.year} ${newestCar.make} ${newestCar.model}` : "Not enough data yet"}
+            icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
             tone="teal"
           />
           <StatCard
@@ -302,19 +311,9 @@ export function HomePage() {
             tone="sky"
           />
           <StatCard
-            label="Newest report"
-            value={
-              newestReport
-                ? `${newestReport.make} ${newestReport.model} · ${formatDate(newestReport.observed_date)}`
-                : "Not enough data yet"
-            }
-            icon={<Sparkles className="h-5 w-5" aria-hidden="true" />}
-            tone="amber"
-          />
-          <StatCard
-            label="Average reported mileage"
-            value={averageMileage !== null ? `${formatNumber(averageMileage)} mi` : "Not enough data yet"}
-            icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
+            label="Oldest car"
+            value={oldestCar ? `${oldestCar.year} ${oldestCar.make} ${oldestCar.model}` : "Not enough data yet"}
+            icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
             tone="indigo"
           />
         </div>
@@ -391,22 +390,24 @@ function AutoScrollFeed({ reports }: { reports: PublicRecentReport[] }) {
         {loopedReports.map((report, index) => (
           <li
             key={`${report.airport_code}-${report.model}-${report.observed_date}-${index}`}
-            className="flex items-center gap-3 px-4 py-3 sm:px-5"
+            className="flex items-start gap-3 px-4 py-3 sm:px-5"
             style={{ height: FEED_ROW_HEIGHT }}
           >
-            <CarMakeBadge make={report.make} size="md" />
+            <div className="flex h-5 w-28 shrink-0 items-center justify-start overflow-visible">
+              <CarMakeBadge make={report.make} size="sm" />
+            </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-slate-950">
+              <p className="truncate text-sm font-semibold leading-5 text-slate-950">
                 {report.year ? `${report.year} ` : ""}
                 {report.make} {report.model}
               </p>
-              <p className="truncate text-xs text-slate-500">
+              <p className="truncate text-xs leading-5 text-slate-500">
                 {report.rental_company_name} at {report.airport_code}
               </p>
             </div>
-            <div className="hidden text-right text-xs text-slate-500 sm:block">
-              <p>{formatNumber(report.mileage)} mi</p>
-              <p>{formatDate(report.observed_date)}</p>
+            <div className="hidden text-right text-xs leading-5 text-slate-500 sm:block">
+              <p className="leading-5">{formatMileage(report.mileage)}</p>
+              <p className="leading-5">{formatDate(report.observed_date)}</p>
             </div>
           </li>
         ))}

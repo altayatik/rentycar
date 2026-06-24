@@ -112,12 +112,13 @@ create table if not exists public.vehicle_reports (
 alter table public.vehicle_reports add column if not exists lane_centering boolean not null default false;
 alter table public.vehicle_reports add column if not exists lane_departure_assist boolean not null default false;
 alter table public.vehicle_reports add column if not exists adaptive_cruise_control boolean not null default false;
-alter table public.vehicle_reports add column if not exists hands_free_driving boolean not null default false;
+alter table public.vehicle_reports add column if not exists early_collision_prevention boolean not null default false;
 alter table public.vehicle_reports add column if not exists fuel_type text;
 alter table public.vehicle_reports add column if not exists fuel_octane text;
 alter table public.vehicle_reports add column if not exists ev_charging_speed text;
 alter table public.vehicle_reports add column if not exists fuel_level_percent int;
 alter table public.vehicle_reports add column if not exists tire_condition text;
+alter table public.vehicle_reports add column if not exists drivetrain text;
 alter table public.vehicle_reports add column if not exists license_plate text;
 alter table public.vehicle_reports add column if not exists license_plate_state text;
 
@@ -166,6 +167,15 @@ begin
     alter table public.vehicle_reports
     add constraint vehicle_reports_tire_condition_check
     check (tire_condition is null or tire_condition in ('brand_new', 'decent', 'almost_bald'));
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'vehicle_reports_drivetrain_check' and conrelid = 'public.vehicle_reports'::regclass
+  ) then
+    alter table public.vehicle_reports
+    add constraint vehicle_reports_drivetrain_check
+    check (drivetrain is null or drivetrain in ('fwd', 'rwd', 'awd', '4wd'));
   end if;
 end $$;
 
@@ -383,6 +393,7 @@ select
   vr.exterior_condition,
   vr.interior_condition,
   vr.tire_condition,
+  vr.drivetrain,
   vr.fuel_type,
   vr.fuel_octane,
   vr.ev_charging_speed,
@@ -390,7 +401,7 @@ select
   vr.lane_centering,
   vr.lane_departure_assist,
   vr.adaptive_cruise_control,
-  vr.hands_free_driving,
+  vr.early_collision_prevention,
   vr.license_plate,
   vr.license_plate_state,
   vr.observed_at as observed_date

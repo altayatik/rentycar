@@ -20,12 +20,14 @@ interface StatCardProps {
 
 export function StatCard({ label, value, icon, tone = "teal" }: StatCardProps) {
   return (
-    <div className="panel p-5 transition hover:-translate-y-0.5 hover:shadow-lg">
+    <div className="panel flex h-full flex-col justify-between p-5 transition hover:-translate-y-0.5 hover:shadow-lg">
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm font-medium text-slate-500">{label}</p>
         {icon ? <div className={`rounded-xl border p-2 ${toneClasses[tone]}`}>{icon}</div> : null}
       </div>
-      <p className="mt-4 break-words text-3xl font-semibold tracking-normal text-slate-950">{value}</p>
+      <p className="mt-4 line-clamp-2 break-words text-2xl font-semibold tracking-normal text-slate-950">
+        {value}
+      </p>
     </div>
   );
 }

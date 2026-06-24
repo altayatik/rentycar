@@ -1,6 +1,4 @@
-import { PlusCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
@@ -15,6 +13,7 @@ export function DashboardPage() {
   const [reports, setReports] = useState<MyReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [editingReport, setEditingReport] = useState<MyReportRow | null>(null);
 
   const loadReports = useCallback(async () => {
     if (!supabase || !user) {
@@ -47,24 +46,22 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="panel flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-normal text-indigo-700">Dashboard</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-950">
-            Welcome{profile?.username ? `, ${profile.username}` : ""}
-          </h1>
-          <p className="mt-2 max-w-2xl text-slate-600">
-            Submit verified lot observations and review your recent rental car reports.
-          </p>
-        </div>
-        <Link className="button-primary self-start sm:self-auto" to="/submit">
-          <PlusCircle className="h-4 w-4" aria-hidden="true" />
-          Submit
-        </Link>
+      <section className="panel p-6">
+        <p className="text-sm font-semibold uppercase tracking-normal text-indigo-700">Dashboard</p>
+        <h1 className="mt-2 text-3xl font-semibold text-slate-950">
+          Welcome{profile?.username ? `, ${profile.username}` : ""}
+        </h1>
+        <p className="mt-2 max-w-2xl text-slate-600">
+          Submit verified lot observations and review your recent rental car reports.
+        </p>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-        <SubmitReportForm onSubmitted={loadReports} />
+        <SubmitReportForm
+          onSubmitted={loadReports}
+          editingReport={editingReport}
+          onCancelEdit={() => setEditingReport(null)}
+        />
 
         <section className="space-y-4">
           <div>
@@ -75,7 +72,7 @@ export function DashboardPage() {
           {loading ? (
             <LoadingState label="Loading your reports" />
           ) : reports.length ? (
-            <ReportTable reports={reports} mode="private" />
+            <ReportTable reports={reports} mode="private" onEdit={(report) => setEditingReport(report)} />
           ) : (
             <EmptyState title="No reports submitted" message="Your reports will show up here." />
           )}

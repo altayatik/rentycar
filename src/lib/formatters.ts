@@ -1,7 +1,10 @@
-import type { Condition, EvChargingSpeed, FuelOctane, FuelType, TireCondition, TrimTier } from "./types";
+import type { Condition, Drivetrain, EvChargingSpeed, FuelOctane, FuelType, TireCondition, TrimTier } from "./types";
 
 export const formatNumber = (value: number | null | undefined) =>
   typeof value === "number" ? new Intl.NumberFormat("en-US").format(value) : "Not reported";
+
+export const formatMileage = (value: number | null | undefined) =>
+  typeof value === "number" ? `${new Intl.NumberFormat("en-US").format(value)} mi` : "N/A";
 
 export const formatDate = (value: string | null | undefined) =>
   value
@@ -23,6 +26,16 @@ const tireConditionLabels: Record<TireCondition, string> = {
 
 export const formatTireCondition = (value: TireCondition | null | undefined) =>
   value ? tireConditionLabels[value] : null;
+
+const drivetrainLabels: Record<Drivetrain, string> = {
+  fwd: "FWD",
+  rwd: "RWD",
+  awd: "AWD",
+  "4wd": "4WD",
+};
+
+export const formatDrivetrain = (value: Drivetrain | null | undefined) =>
+  value ? drivetrainLabels[value] : null;
 
 const trimLabels: Record<TrimTier, string> = {
   entry: "Entry",

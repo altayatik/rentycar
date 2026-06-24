@@ -142,9 +142,11 @@ export function FilterBar({
         </label>
 
         <label className="space-y-1.5">
-          <span className="label">Region</span>
+          <span className="label" title="The airport's state or province — not the vehicle's license plate state.">
+            Rental location
+          </span>
           <select className="input" value={filters.region} onChange={(event) => update("region", event.target.value)}>
-            <option value="">State or province</option>
+            <option value="">Airport state or province</option>
             {countryRegions.map((region) => (
               <option key={region.key} value={region.key}>
                 {region.label}

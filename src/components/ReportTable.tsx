@@ -1,14 +1,15 @@
-import { Building2, MapPin } from "lucide-react";
+import { Building2, MapPin, Pencil } from "lucide-react";
 import { CarMakeBadge } from "./CarMakeBadge";
 import { EmptyState } from "./EmptyState";
-import { formatCondition, formatDate, formatNumber, formatTireCondition } from "../lib/formatters";
-import type { Condition, MyReportRow, PublicRecentReport, TireCondition } from "../lib/types";
+import { formatCondition, formatDate, formatDrivetrain, formatMileage, formatTireCondition } from "../lib/formatters";
+import type { Condition, Drivetrain, MyReportRow, PublicRecentReport, TireCondition } from "../lib/types";
 
 type ReportRow = PublicRecentReport | MyReportRow;
 
 interface ReportTableProps {
   reports: ReportRow[];
   mode?: "public" | "private";
+  onEdit?: (report: MyReportRow) => void;
 }
 
 const conditionStyles: Record<Condition, string> = {
@@ -18,7 +19,7 @@ const conditionStyles: Record<Condition, string> = {
   poor: "bg-red-100 text-red-800 border-red-200",
 };
 
-export function ReportTable({ reports, mode = "public" }: ReportTableProps) {
+export function ReportTable({ reports, mode = "public", onEdit }: ReportTableProps) {
   if (reports.length === 0) {
     return (
       <EmptyState
@@ -28,14 +29,20 @@ export function ReportTable({ reports, mode = "public" }: ReportTableProps) {
     );
   }
 
-  const rows = reports.map((report, index) => ({ row: normalizeReport(report), index }));
+  const rows = reports.map((report, index) => ({ row: normalizeReport(report), original: report, index }));
+  const showEdit = mode === "private" && Boolean(onEdit);
 
   return (
     <>
       {/* Mobile / tablet card layout */}
       <div className="grid gap-4 sm:grid-cols-2 lg:hidden">
-        {rows.map(({ row, index }) => (
-          <ReportCard key={`${row.airport}-${row.model}-${row.observed}-${index}`} row={row} mode={mode} />
+        {rows.map(({ row, original, index }) => (
+          <ReportCard
+            key={`${row.airport}-${row.model}-${row.observed}-${index}`}
+            row={row}
+            mode={mode}
+            onEdit={showEdit ? () => onEdit?.(original as MyReportRow) : undefined}
+          />
         ))}
       </div>
 
@@ -52,10 +59,11 @@ export function ReportTable({ reports, mode = "public" }: ReportTableProps) {
                 <th className="px-4 py-3">Exterior</th>
                 <th className="px-4 py-3">Interior</th>
                 <th className="px-4 py-3">{mode === "private" ? "Observed" : "Date"}</th>
+                {showEdit ? <th className="px-4 py-3" /> : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.map(({ row, index }) => (
+              {rows.map(({ row, original, index }) => (
                 <tr key={`${row.airport}-${row.model}-${row.observed}-${index}`} className="transition hover:bg-indigo-50/40">
                   <td className="whitespace-nowrap px-4 py-3">
                     <div className="flex items-center gap-2.5">
@@ -68,7 +76,7 @@ export function ReportTable({ reports, mode = "public" }: ReportTableProps) {
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 font-semibold text-slate-950">{row.airport}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-600">{row.company}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatNumber(row.mileage)} mi</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatMileage(row.mileage)}</td>
                   <td className="whitespace-nowrap px-4 py-3">
                     <ConditionPill condition={row.exterior} />
                   </td>
@@ -76,6 +84,18 @@ export function ReportTable({ reports, mode = "public" }: ReportTableProps) {
                     <ConditionPill condition={row.interior} />
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDate(row.observed)}</td>
+                  {showEdit ? (
+                    <td className="whitespace-nowrap px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                        onClick={() => onEdit?.(original as MyReportRow)}
+                      >
+                        <Pencil className="h-3 w-3" aria-hidden="true" />
+                        Edit
+                      </button>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
@@ -99,7 +119,15 @@ function ConditionPill({ condition }: { condition: Condition | null | undefined 
   );
 }
 
-function ReportCard({ row, mode }: { row: NormalizedReport; mode: "public" | "private" }) {
+function ReportCard({
+  row,
+  mode,
+  onEdit,
+}: {
+  row: NormalizedReport;
+  mode: "public" | "private";
+  onEdit?: () => void;
+}) {
   return (
     <article className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-lg sm:p-5">
       <div className="flex items-start gap-3">
@@ -113,12 +141,22 @@ function ReportCard({ row, mode }: { row: NormalizedReport; mode: "public" | "pr
             {row.company} at {row.airport}
           </p>
         </div>
+        {onEdit ? (
+          <button
+            type="button"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+            onClick={onEdit}
+          >
+            <Pencil className="h-3 w-3" aria-hidden="true" />
+            Edit
+          </button>
+        ) : null}
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
         <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
           <MapPin className="h-3 w-3" aria-hidden="true" />
-          {formatNumber(row.mileage)} mi
+          {formatMileage(row.mileage)}
         </span>
         <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
           <Building2 className="h-3 w-3" aria-hidden="true" />
@@ -133,11 +171,16 @@ function ReportCard({ row, mode }: { row: NormalizedReport; mode: "public" | "pr
         <ConditionPill condition={row.interior} />
       </div>
 
-      {row.tireCondition || row.licensePlate ? (
+      {row.tireCondition || row.drivetrain || row.licensePlate ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {row.tireCondition ? (
             <span className="text-xs font-medium text-slate-500">
               Tires: {formatTireCondition(row.tireCondition)}
+            </span>
+          ) : null}
+          {row.drivetrain ? (
+            <span className="text-xs font-medium text-slate-500">
+              Drivetrain: {formatDrivetrain(row.drivetrain)}
             </span>
           ) : null}
           {row.licensePlate ? (
@@ -167,6 +210,7 @@ interface NormalizedReport {
   interior: Condition | null | undefined;
   observed: string;
   tireCondition?: TireCondition | null;
+  drivetrain?: Drivetrain | null;
   licensePlate?: string | null;
   licensePlateState?: string | null;
 }
@@ -184,6 +228,7 @@ function normalizeReport(report: ReportRow): NormalizedReport {
       interior: report.interior_condition,
       observed: report.observed_date,
       tireCondition: report.tire_condition,
+      drivetrain: report.drivetrain,
       licensePlate: report.license_plate,
       licensePlateState: report.license_plate_state,
     };
@@ -200,6 +245,7 @@ function normalizeReport(report: ReportRow): NormalizedReport {
     interior: report.interior_condition,
     observed: report.observed_at,
     tireCondition: report.tire_condition,
+    drivetrain: report.drivetrain,
     licensePlate: report.license_plate,
     licensePlateState: report.license_plate_state,
   };

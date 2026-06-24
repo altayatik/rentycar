@@ -7,6 +7,7 @@ export type FuelType = "gasoline" | "phev" | "hybrid" | "bev" | "hydrogen" | "di
 export type FuelOctane = "regular" | "midgrade" | "premium";
 export type EvChargingSpeed = "level_2" | "dcfc_150" | "dcfc_250" | "dcfc_350";
 export type TireCondition = "brand_new" | "decent" | "almost_bald";
+export type Drivetrain = "fwd" | "rwd" | "awd" | "4wd";
 
 export interface Profile {
   id: string;
@@ -67,6 +68,7 @@ export interface VehicleReport {
   exterior_condition: Condition;
   interior_condition: Condition;
   tire_condition: TireCondition | null;
+  drivetrain: Drivetrain | null;
   fuel_type: FuelType | null;
   fuel_octane: FuelOctane | null;
   ev_charging_speed: EvChargingSpeed | null;
@@ -74,7 +76,7 @@ export interface VehicleReport {
   lane_centering: boolean;
   lane_departure_assist: boolean;
   adaptive_cruise_control: boolean;
-  hands_free_driving: boolean;
+  early_collision_prevention: boolean;
   license_plate: string | null;
   license_plate_state: string | null;
   observed_at: string;
@@ -117,6 +119,7 @@ export interface PublicRecentReport {
   exterior_condition: Condition;
   interior_condition: Condition;
   tire_condition: TireCondition | null;
+  drivetrain: Drivetrain | null;
   fuel_type: FuelType | null;
   fuel_octane: FuelOctane | null;
   ev_charging_speed: EvChargingSpeed | null;
@@ -124,7 +127,7 @@ export interface PublicRecentReport {
   lane_centering: boolean;
   lane_departure_assist: boolean;
   adaptive_cruise_control: boolean;
-  hands_free_driving: boolean;
+  early_collision_prevention: boolean;
   license_plate: string | null;
   license_plate_state: string | null;
   observed_date: string;
