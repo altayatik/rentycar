@@ -1,6 +1,7 @@
-import { BookOpen, Info, LayoutDashboard, LogIn, Map, Scale, Shield, UserPlus, Users } from "lucide-react";
-import { Link, NavLink } from "react-router-dom";
+import { BookOpen, Info, LayoutDashboard, LogIn, Map, Moon, Scale, Shield, Sun, UserPlus, Users } from "lucide-react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../features/auth/authStore";
+import { useTheme } from "../features/theme/themeStore";
 import logo from "../assets/logo.png";
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -10,6 +11,9 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 
 export function Navbar() {
   const { user, profile, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
+  const isHome = location.pathname === "/";
 
   return (
     <header className="sticky top-0 z-[1000] border-b border-white/10 bg-[#0a0f1a]/85 backdrop-blur-xl">
@@ -67,6 +71,21 @@ export function Navbar() {
               </NavLink>
             </>
           )}
+          {isHome ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Moon className="h-4 w-4" aria-hidden="true" />
+              )}
+              <span className="hidden sm:inline">{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+            </button>
+          ) : null}
         </nav>
       </div>
     </header>

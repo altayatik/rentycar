@@ -34,6 +34,7 @@ interface FilterBarProps {
   makes: string[];
   models: string[];
   onChange: (filters: ReportFilters) => void;
+  theme?: "light" | "dark";
 }
 
 const conditionOptions: Array<{ value: Condition; label: string }> = [
@@ -66,8 +67,14 @@ export function FilterBar({
   makes,
   models,
   onChange,
+  theme = "light",
 }: FilterBarProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const isDark = theme === "dark";
+  const panelClass = isDark ? "glass-panel p-5" : "panel p-5";
+  const labelClass = isDark ? "glass-label" : "label";
+  const inputClass = isDark ? "glass-input" : "input";
+  const buttonSecondaryClass = isDark ? "glass-button-secondary" : "button-secondary";
   const update = (key: keyof ReportFilters, value: string) => {
     onChange({ ...filters, [key]: value });
   };
@@ -78,16 +85,18 @@ export function FilterBar({
     : regions;
 
   return (
-    <div className="panel p-5">
+    <div className={panelClass}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <Search className="h-4 w-4 text-indigo-700" aria-hidden="true" />
+          <div className={`flex items-center gap-2 text-sm font-semibold ${isDark ? "text-white" : "text-slate-900"}`}>
+            <Search className={`h-4 w-4 ${isDark ? "text-teal-300" : "text-indigo-700"}`} aria-hidden="true" />
             Search reports
           </div>
-          <p className="mt-1 text-xs text-slate-500">Start with an airport or rental company.</p>
+          <p className={`mt-1 text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            Start with an airport or rental company.
+          </p>
         </div>
-        <button className="button-secondary px-3 py-1.5" type="button" onClick={reset}>
+        <button className={`${buttonSecondaryClass} px-3 py-1.5`} type="button" onClick={reset}>
           <X className="h-4 w-4" aria-hidden="true" />
           Clear
         </button>
@@ -95,9 +104,9 @@ export function FilterBar({
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.85fr)_190px_160px]">
         <label className="space-y-1.5">
-          <span className="label">Airport</span>
+          <span className={labelClass}>Airport</span>
           <input
-            className="input"
+            className={inputClass}
             list="airport-search-options"
             placeholder="Search airport, city, or IATA code"
             value={filters.airportQuery}
@@ -116,9 +125,9 @@ export function FilterBar({
         </label>
 
         <label className="space-y-1.5">
-          <span className="label">Rental company</span>
+          <span className={labelClass}>Rental company</span>
           <input
-            className="input"
+            className={inputClass}
             list="company-search-options"
             placeholder="Search rental company"
             value={filters.companyQuery}
@@ -132,9 +141,9 @@ export function FilterBar({
         </label>
 
         <label className="space-y-1.5">
-          <span className="label">License plate</span>
+          <span className={labelClass}>License plate</span>
           <input
-            className="input uppercase placeholder:normal-case"
+            className={`${inputClass} uppercase placeholder:normal-case`}
             placeholder="Search plate number"
             value={filters.licensePlateQuery}
             onChange={(event) => update("licensePlateQuery", event.target.value)}
@@ -142,10 +151,10 @@ export function FilterBar({
         </label>
 
         <label className="space-y-1.5">
-          <span className="label" title="The airport's state or province — not the vehicle's license plate state.">
+          <span className={labelClass} title="The airport's state or province — not the vehicle's license plate state.">
             Rental location
           </span>
-          <select className="input" value={filters.region} onChange={(event) => update("region", event.target.value)}>
+          <select className={inputClass} value={filters.region} onChange={(event) => update("region", event.target.value)}>
             <option value="">Airport state or province</option>
             {countryRegions.map((region) => (
               <option key={region.key} value={region.key}>
@@ -156,9 +165,9 @@ export function FilterBar({
         </label>
 
         <label className="space-y-1.5">
-          <span className="label">Country</span>
+          <span className={labelClass}>Country</span>
           <select
-            className="input"
+            className={inputClass}
             value={filters.country}
             onChange={(event) => update("country", event.target.value)}
           >
@@ -170,7 +179,7 @@ export function FilterBar({
       </div>
 
       <button
-        className="button-secondary mt-4 px-3 py-1.5"
+        className={`${buttonSecondaryClass} mt-4 px-3 py-1.5`}
         type="button"
         onClick={() => setShowAdvanced((current) => !current)}
       >
@@ -180,19 +189,31 @@ export function FilterBar({
 
       {showAdvanced ? (
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-          <Select label="Car make" value={filters.make} options={makes} onChange={(value) => update("make", value)} />
-          <Select label="Car model" value={filters.model} options={models} onChange={(value) => update("model", value)} />
+          <Select
+            label="Car make"
+            value={filters.make}
+            options={makes}
+            onChange={(value) => update("make", value)}
+            theme={theme}
+          />
+          <Select
+            label="Car model"
+            value={filters.model}
+            options={models}
+            onChange={(value) => update("model", value)}
+            theme={theme}
+          />
           <label className="space-y-1.5">
-            <span className="label">Mileage min</span>
-            <input className="input" type="number" value={filters.mileageMin} onChange={(event) => update("mileageMin", event.target.value)} />
+            <span className={labelClass}>Mileage min</span>
+            <input className={inputClass} type="number" value={filters.mileageMin} onChange={(event) => update("mileageMin", event.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="label">Mileage max</span>
-            <input className="input" type="number" value={filters.mileageMax} onChange={(event) => update("mileageMax", event.target.value)} />
+            <span className={labelClass}>Mileage max</span>
+            <input className={inputClass} type="number" value={filters.mileageMax} onChange={(event) => update("mileageMax", event.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="label">Condition</span>
-            <select className="input" value={filters.condition} onChange={(event) => update("condition", event.target.value)}>
+            <span className={labelClass}>Condition</span>
+            <select className={inputClass} value={filters.condition} onChange={(event) => update("condition", event.target.value)}>
               <option value="">Any</option>
               {conditionOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -203,12 +224,12 @@ export function FilterBar({
           </label>
           <div className="grid grid-cols-2 gap-2">
             <label className="space-y-1.5">
-              <span className="label">From</span>
-              <input className="input" type="date" value={filters.observedFrom} onChange={(event) => update("observedFrom", event.target.value)} />
+              <span className={labelClass}>From</span>
+              <input className={inputClass} type="date" value={filters.observedFrom} onChange={(event) => update("observedFrom", event.target.value)} />
             </label>
             <label className="space-y-1.5">
-              <span className="label">To</span>
-              <input className="input" type="date" value={filters.observedTo} onChange={(event) => update("observedTo", event.target.value)} />
+              <span className={labelClass}>To</span>
+              <input className={inputClass} type="date" value={filters.observedTo} onChange={(event) => update("observedTo", event.target.value)} />
             </label>
           </div>
         </div>
@@ -222,13 +243,15 @@ interface SelectProps {
   value: string;
   options: string[];
   onChange: (value: string) => void;
+  theme?: "light" | "dark";
 }
 
-function Select({ label, value, options, onChange }: SelectProps) {
+function Select({ label, value, options, onChange, theme = "light" }: SelectProps) {
+  const isDark = theme === "dark";
   return (
     <label className="space-y-1.5">
-      <span className="label">{label}</span>
-      <select className="input" value={value} onChange={(event) => onChange(event.target.value)}>
+      <span className={isDark ? "glass-label" : "label"}>{label}</span>
+      <select className={isDark ? "glass-input" : "input"} value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">All</option>
         {options.map((option) => (
           <option key={option} value={option}>

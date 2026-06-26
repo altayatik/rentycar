@@ -29,10 +29,13 @@ import { fallbackAirportStats } from "../../data/fallbackAirports";
 import { formatDate, formatMileage, formatNumber } from "../../lib/formatters";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { useAuth } from "../auth/authStore";
+import { useTheme } from "../theme/themeStore";
 import type { PublicAirportStats, PublicRecentReport, PublicRegionStats } from "../../lib/types";
 
 export function HomePage() {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [airportStats, setAirportStats] = useState<PublicAirportStats[]>(fallbackAirportStats);
   const [regionStats, setRegionStats] = useState<PublicRegionStats[]>([]);
   const [recentReports, setRecentReports] = useState<PublicRecentReport[]>([]);
@@ -198,37 +201,51 @@ export function HomePage() {
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-panel sm:px-6">
+      <section
+        className={
+          isDark
+            ? "glass-panel relative overflow-hidden px-5 py-4 sm:px-6"
+            : "relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-panel sm:px-6"
+        }
+      >
         <div className="relative flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <Sparkles className="h-5 w-5 text-indigo-600" aria-hidden="true" />
-            <h1 className="text-lg font-semibold leading-tight text-slate-950 sm:text-xl">
+            <Sparkles className={`h-5 w-5 ${isDark ? "text-teal-300" : "text-indigo-600"}`} aria-hidden="true" />
+            <h1 className={`text-lg font-semibold leading-tight sm:text-xl ${isDark ? "font-display text-white" : "text-slate-950"}`}>
               RentyCar — real rental car sightings from airport lots.
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
-            <a className="button-primary" href="#reports">
+            <a className={isDark ? "glass-button-primary" : "button-primary"} href="#reports">
               View public reports
             </a>
             {user ? (
-              <Link className="button-secondary" to="/dashboard">
+              <Link className={isDark ? "glass-button-secondary" : "button-secondary"} to="/dashboard">
                 Go to dashboard
               </Link>
             ) : (
-              <Link className="button-secondary" to="/login">
+              <Link className={isDark ? "glass-button-secondary" : "button-secondary"} to="/login">
                 Sign in if assigned
               </Link>
             )}
           </div>
         </div>
         {!isSupabaseConfigured ? (
-          <div className="relative mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          <div
+            className={`relative mt-3 rounded-xl border p-3 text-xs ${
+              isDark ? "border-amber-400/20 bg-amber-400/10 text-amber-200" : "border-amber-200 bg-amber-50 text-amber-800"
+            }`}
+          >
             Supabase is not configured yet, so the atlas is showing fallback US and Canada airport regions.
           </div>
         ) : null}
       </section>
 
-      <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs leading-5 text-slate-600 sm:text-sm">
+      <p
+        className={`rounded-xl border px-4 py-2.5 text-xs leading-5 sm:text-sm ${
+          isDark ? "border-white/10 bg-white/[0.04] text-slate-300" : "border-slate-200 bg-slate-50 text-slate-600"
+        }`}
+      >
         Public browsing is open to everyone. There's no public sign-up yet — report submission is limited
         to manually assigned tester accounts while the project is still taking shape.
       </p>
@@ -241,6 +258,7 @@ export function HomePage() {
         makes={filterOptions.makes}
         models={filterOptions.models}
         onChange={setFilters}
+        theme={theme}
       />
 
       <NorthAmericaRegionMap
@@ -254,14 +272,19 @@ export function HomePage() {
           rentalCompanyCount: companyCount,
           latestReportDate: newestReport?.observed_date ?? null,
         }}
+        theme={theme}
       />
 
-      {error ? <ErrorState message={error} /> : null}
+      {error ? <ErrorState message={error} tone={theme} /> : null}
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-950">Airport lot pulse</h2>
-          <p className="mt-1 text-sm text-slate-500">A quick read on what's being spotted right now.</p>
+          <h2 className={`text-2xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
+            Airport lot pulse
+          </h2>
+          <p className={`mt-1 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            A quick read on what's being spotted right now.
+          </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
@@ -269,36 +292,42 @@ export function HomePage() {
             value={formatNumber(totalReports)}
             icon={<ClipboardList className="h-5 w-5" aria-hidden="true" />}
             tone="indigo"
+            theme={theme}
           />
           <StatCard
             label="Airport lots covered"
             value={formatNumber(airportsCovered)}
             icon={<MapPin className="h-5 w-5" aria-hidden="true" />}
             tone="sky"
+            theme={theme}
           />
           <StatCard
             label="Rental companies covered"
             value={formatNumber(companyCount)}
             icon={<Building2 className="h-5 w-5" aria-hidden="true" />}
             tone="violet"
+            theme={theme}
           />
           <StatCard
             label="Regions reporting (US + Canada)"
             value={formatNumber(usRegionsCovered + canadaRegionsCovered)}
             icon={<Map className="h-5 w-5" aria-hidden="true" />}
             tone="rose"
+            theme={theme}
           />
           <StatCard
             label="Most spotted make"
             value={mostReportedMake ?? "Not enough data yet"}
             icon={<Trophy className="h-5 w-5" aria-hidden="true" />}
             tone="amber"
+            theme={theme}
           />
           <StatCard
             label="Newest car"
             value={newestCar ? `${newestCar.year} ${newestCar.make} ${newestCar.model}` : "Not enough data yet"}
             icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
             tone="teal"
+            theme={theme}
           />
           <StatCard
             label="Most active airport"
@@ -309,12 +338,14 @@ export function HomePage() {
             }
             icon={<MapPin className="h-5 w-5" aria-hidden="true" />}
             tone="sky"
+            theme={theme}
           />
           <StatCard
             label="Oldest car"
             value={oldestCar ? `${oldestCar.year} ${oldestCar.make} ${oldestCar.model}` : "Not enough data yet"}
             icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
             tone="indigo"
+            theme={theme}
           />
         </div>
       </section>
@@ -322,27 +353,31 @@ export function HomePage() {
       <section id="reports" className="space-y-4 scroll-mt-24">
         <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
           <div>
-            <h2 className="text-2xl font-semibold text-slate-950">What people are spotting</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <h2 className={`text-2xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
+              What people are spotting
+            </h2>
+            <p className={`mt-1 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
               Recent sightings from the lot. Reporter identities are never shown publicly.
               {selectedRegion ? ` Filtered to ${selectedRegion.regionName}.` : ""}
             </p>
           </div>
-          <p className="text-sm text-slate-500">{filteredReports.length} visible</p>
+          <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{filteredReports.length} visible</p>
         </div>
         {loading ? (
-          <LoadingState label="Loading public reports" />
+          <LoadingState label="Loading public reports" tone={theme} />
         ) : recentReports.length && filteredReports.length ? (
-          <AutoScrollFeed reports={filteredReports} />
+          <AutoScrollFeed reports={filteredReports} theme={theme} />
         ) : selectedRegion ? (
           <EmptyState
             title={`No reports for ${selectedRegion.regionName}`}
             message="No rental car reports yet for this region."
+            tone={theme}
           />
         ) : (
           <EmptyState
             title="No public reports yet"
             message="Once trusted users submit observations, this feed will start filling in."
+            tone={theme}
           />
         )}
       </section>
@@ -353,7 +388,8 @@ export function HomePage() {
 const FEED_ROW_HEIGHT = 76;
 const FEED_VISIBLE_ROWS = 5;
 
-function AutoScrollFeed({ reports }: { reports: PublicRecentReport[] }) {
+function AutoScrollFeed({ reports, theme = "light" }: { reports: PublicRecentReport[]; theme?: "light" | "dark" }) {
+  const isDark = theme === "dark";
   const containerRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
 
@@ -383,10 +419,14 @@ function AutoScrollFeed({ reports }: { reports: PublicRecentReport[] }) {
       ref={containerRef}
       onMouseEnter={() => (pausedRef.current = true)}
       onMouseLeave={() => (pausedRef.current = false)}
-      className="overflow-y-hidden rounded-2xl border border-slate-200 bg-white shadow-panel"
+      className={
+        isDark
+          ? "glass-panel overflow-y-hidden"
+          : "overflow-y-hidden rounded-2xl border border-slate-200 bg-white shadow-panel"
+      }
       style={{ height: FEED_ROW_HEIGHT * FEED_VISIBLE_ROWS }}
     >
-      <ul className="divide-y divide-slate-100">
+      <ul className={isDark ? "divide-y divide-white/10" : "divide-y divide-slate-100"}>
         {loopedReports.map((report, index) => (
           <li
             key={`${report.airport_code}-${report.model}-${report.observed_date}-${index}`}
@@ -394,18 +434,18 @@ function AutoScrollFeed({ reports }: { reports: PublicRecentReport[] }) {
             style={{ height: FEED_ROW_HEIGHT }}
           >
             <div className="flex h-5 w-28 shrink-0 items-center justify-start overflow-visible">
-              <CarMakeBadge make={report.make} size="sm" />
+              <CarMakeBadge make={report.make} size="sm" theme={theme} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold leading-5 text-slate-950">
+              <p className={`truncate text-sm font-semibold leading-5 ${isDark ? "text-white" : "text-slate-950"}`}>
                 {report.year ? `${report.year} ` : ""}
                 {report.make} {report.model}
               </p>
-              <p className="truncate text-xs leading-5 text-slate-500">
+              <p className={`truncate text-xs leading-5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                 {report.rental_company_name} at {report.airport_code}
               </p>
             </div>
-            <div className="hidden text-right text-xs leading-5 text-slate-500 sm:block">
+            <div className={`hidden text-right text-xs leading-5 sm:block ${isDark ? "text-slate-400" : "text-slate-500"}`}>
               <p className="leading-5">{formatMileage(report.mileage)}</p>
               <p className="leading-5">{formatDate(report.observed_date)}</p>
             </div>

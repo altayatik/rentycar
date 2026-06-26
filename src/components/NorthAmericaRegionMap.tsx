@@ -21,6 +21,7 @@ interface NorthAmericaRegionMapProps {
     rentalCompanyCount: number;
     latestReportDate: string | null;
   };
+  theme?: "light" | "dark";
 }
 
 interface RegionStats {
@@ -127,7 +128,9 @@ export function NorthAmericaRegionMap({
   selectedRegion,
   onSelectRegion,
   allRegionsTotals,
+  theme = "light",
 }: NorthAmericaRegionMapProps) {
+  const isDark = theme === "dark";
   const [hoveredRegion, setHoveredRegion] = useState<SelectedRegion | null>(null);
   const regionStats = useMemo(() => buildRegionStats(airports, regions), [airports, regions]);
   const allRegionsStats = useMemo(
@@ -141,29 +144,37 @@ export function NorthAmericaRegionMap({
   const maxReports = Math.max(1, ...Array.from(regionStats.values()).map((stats) => stats.reportCount));
 
   return (
-    <section className="panel overflow-hidden">
+    <section className={isDark ? "glass-panel overflow-hidden" : "panel overflow-hidden"}>
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.35fr)_330px]">
-        <div className="min-w-0 bg-[#fbf6e8] p-4 sm:p-5">
+        <div className={isDark ? "min-w-0 bg-white/[0.03] p-4 sm:p-5" : "min-w-0 bg-[#fbf6e8] p-4 sm:p-5"}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-normal text-indigo-700">Region atlas</p>
-              <h2 className="text-xl font-semibold text-slate-950">US and Canada report density</h2>
+              <p className={`text-xs font-semibold uppercase tracking-normal ${isDark ? "text-teal-300" : "text-indigo-700"}`}>
+                Region atlas
+              </p>
+              <h2 className={`text-xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
+                US and Canada report density
+              </h2>
             </div>
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-600">
-              <MousePointer2 className="h-3.5 w-3.5 text-indigo-700" aria-hidden="true" />
+            <div
+              className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${
+                isDark ? "border-white/15 bg-white/[0.06] text-slate-300" : "border-slate-200 bg-white/80 text-slate-600"
+              }`}
+            >
+              <MousePointer2 className={`h-3.5 w-3.5 ${isDark ? "text-teal-300" : "text-indigo-700"}`} aria-hidden="true" />
               Hover or click a region
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white/70 p-3">
+          <div className={`overflow-hidden rounded-xl border p-3 ${isDark ? "border-white/15 bg-white/[0.04]" : "border-slate-200 bg-white/70"}`}>
             <svg className="block h-auto w-full" viewBox="0 0 720 510" role="img" aria-label="Stylized US and Canada rental car report density map">
-              <text x="62" y="24" className="fill-slate-500 text-[13px] font-semibold">
+              <text x="62" y="24" className={`text-[13px] font-semibold ${isDark ? "fill-slate-400" : "fill-slate-500"}`}>
                 Canada
               </text>
-              <text x="62" y="148" className="fill-slate-500 text-[13px] font-semibold">
+              <text x="62" y="148" className={`text-[13px] font-semibold ${isDark ? "fill-slate-400" : "fill-slate-500"}`}>
                 United States
               </text>
-              <text x="62" y="408" className="fill-slate-500 text-[11px] font-semibold">
+              <text x="62" y="408" className={`text-[11px] font-semibold ${isDark ? "fill-slate-400" : "fill-slate-500"}`}>
                 Insets
               </text>
               {tiles.map((tile) => (
@@ -175,33 +186,46 @@ export function NorthAmericaRegionMap({
                   selectedRegion={selectedRegion}
                   onHover={setHoveredRegion}
                   onSelect={onSelectRegion}
+                  isDark={isDark}
                 />
               ))}
             </svg>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-medium text-slate-600">
+          <div className={`mt-4 flex flex-wrap items-center gap-3 text-xs font-medium ${isDark ? "text-slate-300" : "text-slate-600"}`}>
             <span>Report density</span>
-            <LegendSwatch className="bg-slate-100" label="None" />
-            <LegendSwatch className="bg-indigo-100" label="Low" />
-            <LegendSwatch className="bg-indigo-300" label="Medium" />
-            <LegendSwatch className="bg-indigo-600" label="High" />
+            <LegendSwatch className={isDark ? "bg-white/10" : "bg-slate-100"} label="None" isDark={isDark} />
+            <LegendSwatch className={isDark ? "bg-teal-900" : "bg-indigo-100"} label="Low" isDark={isDark} />
+            <LegendSwatch className={isDark ? "bg-teal-500" : "bg-indigo-300"} label="Medium" isDark={isDark} />
+            <LegendSwatch className={isDark ? "bg-teal-300" : "bg-indigo-600"} label="High" isDark={isDark} />
           </div>
         </div>
 
-        <aside className="border-t border-slate-200 bg-white p-5 lg:border-l lg:border-t-0">
+        <aside
+          className={
+            isDark
+              ? "border-t border-white/10 bg-white/[0.03] p-5 lg:border-l lg:border-t-0"
+              : "border-t border-slate-200 bg-white p-5 lg:border-l lg:border-t-0"
+          }
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Selected region</p>
-              <h3 className="mt-2 text-2xl font-semibold text-slate-950">
+              <p className={`text-xs font-semibold uppercase tracking-normal ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                Selected region
+              </p>
+              <h3 className={`mt-2 text-2xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
                 {activeRegion?.regionName ?? "All regions"}
               </h3>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className={`mt-1 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                 {activeRegion ? countryNames[activeRegion.country] : "Totals across the US and Canada."}
               </p>
             </div>
             {selectedRegion ? (
-              <button className="button-secondary px-3 py-1.5" type="button" onClick={() => onSelectRegion(null)}>
+              <button
+                className={isDark ? "glass-button-secondary px-3 py-1.5" : "button-secondary px-3 py-1.5"}
+                type="button"
+                onClick={() => onSelectRegion(null)}
+              >
                 <X className="h-4 w-4" aria-hidden="true" />
                 Clear
               </button>
@@ -209,19 +233,27 @@ export function NorthAmericaRegionMap({
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
-            <Detail label="Reports" value={formatNumber(activeStats?.reportCount ?? 0)} />
-            <Detail label="Airports" value={formatNumber(activeStats?.airportCount ?? 0)} />
-            <Detail label="Companies" value={formatNumber(activeStats?.rentalCompanyCount ?? 0)} />
-            <Detail label="Latest" value={formatDate(activeStats?.latestReportDate)} />
+            <Detail label="Reports" value={formatNumber(activeStats?.reportCount ?? 0)} isDark={isDark} />
+            <Detail label="Airports" value={formatNumber(activeStats?.airportCount ?? 0)} isDark={isDark} />
+            <Detail label="Companies" value={formatNumber(activeStats?.rentalCompanyCount ?? 0)} isDark={isDark} />
+            <Detail label="Latest" value={formatDate(activeStats?.latestReportDate)} isDark={isDark} />
           </div>
 
           {activeRegion && !activeStats?.reportCount ? (
-            <div className="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            <div
+              className={`mt-5 rounded-xl border border-dashed p-4 text-sm ${
+                isDark ? "border-white/15 bg-white/[0.04] text-slate-300" : "border-slate-200 bg-slate-50 text-slate-600"
+              }`}
+            >
               No rental car reports yet for this region.
             </div>
           ) : null}
 
-          <div className="mt-6 rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900">
+          <div
+            className={`mt-6 rounded-xl border p-4 text-sm ${
+              isDark ? "border-teal-400/20 bg-teal-400/10 text-teal-100" : "border-indigo-100 bg-indigo-50 text-indigo-900"
+            }`}
+          >
             <div className="flex items-center gap-2 font-semibold">
               <MapPinned className="h-4 w-4" aria-hidden="true" />
               Regional filter
@@ -229,7 +261,7 @@ export function NorthAmericaRegionMap({
             <p className="mt-2">
               Selecting a region filters the public report table and focuses airport searches on that area.
             </p>
-            <p className="mt-2 text-indigo-700/80">
+            <p className={`mt-2 ${isDark ? "text-teal-200/80" : "text-indigo-700/80"}`}>
               This is the rental pickup location's state or province — not the vehicle's license plate
               state. Rental fleet cars aren't always plated in the state they're rented from.
             </p>
@@ -247,6 +279,7 @@ function RegionTileButton({
   selectedRegion,
   onHover,
   onSelect,
+  isDark = false,
 }: {
   tile: RegionTile;
   stats?: RegionStats;
@@ -254,6 +287,7 @@ function RegionTileButton({
   selectedRegion: SelectedRegion | null;
   onHover: (region: SelectedRegion | null) => void;
   onSelect: (region: SelectedRegion) => void;
+  isDark?: boolean;
 }) {
   const width = tileWidth;
   const height = tileHeight;
@@ -286,8 +320,8 @@ function RegionTileButton({
         width={width}
         height={height}
         rx={7}
-        fill={getRegionFill(stats?.reportCount ?? 0, maxReports)}
-        stroke={isSelected ? "#0f172a" : "#ffffff"}
+        fill={getRegionFill(stats?.reportCount ?? 0, maxReports, isDark)}
+        stroke={isSelected ? (isDark ? "#5eead4" : "#0f172a") : isDark ? "#0a0f1a" : "#ffffff"}
         strokeWidth={isSelected ? 3 : 1.5}
         className="transition duration-150 hover:brightness-95"
       />
@@ -295,7 +329,7 @@ function RegionTileButton({
         x={tile.x + width / 2}
         y={tile.y + height / 2 + 5}
         textAnchor="middle"
-        className="pointer-events-none select-none fill-slate-800 text-[12px] font-bold"
+        className={`pointer-events-none select-none text-[12px] font-bold ${isDark ? "fill-slate-100" : "fill-slate-800"}`}
       >
         {tile.label}
       </text>
@@ -386,7 +420,14 @@ function latestDate(left: string | null, right: string | null) {
   return new Date(left) > new Date(right) ? left : right;
 }
 
-function getRegionFill(reportCount: number, maxReports: number) {
+function getRegionFill(reportCount: number, maxReports: number, isDark = false) {
+  if (isDark) {
+    if (reportCount <= 0) return "#1e293b";
+    const intensity = reportCount / maxReports;
+    if (intensity > 0.66) return "#5eead4";
+    if (intensity > 0.33) return "#0d9488";
+    return "#134e4a";
+  }
   if (reportCount <= 0) return "#f1f5f9";
   const intensity = reportCount / maxReports;
   if (intensity > 0.66) return "#4338ca";
@@ -394,19 +435,19 @@ function getRegionFill(reportCount: number, maxReports: number) {
   return "#e0e7ff";
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+function Detail({ label, value, isDark = false }: { label: string; value: string; isDark?: boolean }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-      <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-1 text-base font-semibold text-slate-950">{value}</p>
+    <div className={`rounded-lg border p-3 ${isDark ? "border-white/15 bg-white/[0.04]" : "border-slate-200 bg-slate-50"}`}>
+      <p className={`text-xs font-medium ${isDark ? "text-slate-400" : "text-slate-500"}`}>{label}</p>
+      <p className={`mt-1 text-base font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>{value}</p>
     </div>
   );
 }
 
-function LegendSwatch({ className, label }: { className: string; label: string }) {
+function LegendSwatch({ className, label, isDark = false }: { className: string; label: string; isDark?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={`h-3 w-6 rounded-full border border-slate-200 ${className}`} />
+      <span className={`h-3 w-6 rounded-full border ${isDark ? "border-white/15" : "border-slate-200"} ${className}`} />
       {label}
     </span>
   );
