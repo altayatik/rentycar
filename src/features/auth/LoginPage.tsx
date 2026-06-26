@@ -1,10 +1,11 @@
-import { ArrowLeft, CarFront, LogIn } from "lucide-react";
+import { ArrowLeft, LogIn } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ErrorState } from "../../components/ErrorState";
 import { useAuth } from "./authStore";
 import { isSupabaseConfigured, supabaseConfigError } from "../../lib/supabase";
 import { loginSchema } from "../../lib/validators";
+import logo from "../../assets/logo.png";
 
 type LoginErrors = Partial<Record<"username" | "password", string>>;
 
@@ -51,63 +52,60 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-indigo-50 via-slate-50 to-slate-50 px-4 py-10">
+    <div className="night-shell flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <Link
           to="/"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700"
+          className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-slate-400 transition hover:text-teal-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to RentyCar
         </Link>
 
-        <Link to="/" className="mb-8 flex items-center justify-center gap-2 text-xl font-bold text-slate-950">
-          <span className="rounded-lg bg-indigo-700 p-2 text-white">
-            <CarFront className="h-5 w-5" aria-hidden="true" />
-          </span>
+        <Link to="/" className="mb-8 flex items-center justify-center gap-2.5 font-display text-xl font-bold text-white">
+          <img src={logo} alt="RentyCar" className="h-12 w-12 rounded-2xl shadow-glass" />
           RentyCar
         </Link>
 
-        <form className="panel space-y-6 p-6 sm:p-8" onSubmit={handleSubmit}>
+        <form className="glass-panel space-y-6 p-6 sm:p-8" onSubmit={handleSubmit}>
           <div className="text-center">
-            <h1 className="text-2xl font-semibold text-slate-950">Welcome back</h1>
-            <p className="mt-2 text-sm text-slate-500">Sign in with your assigned RentyCar username.</p>
+            <h1 className="font-display text-2xl font-semibold text-white">Sign in</h1>
+            <p className="mt-2 text-sm text-slate-400">
+              Use your RentyCar account, or create one with an invite code.
+            </p>
           </div>
 
           {!isSupabaseConfigured ? (
-            <ErrorState
-              title="Supabase is not configured"
-              message={supabaseConfigError}
-            />
+            <ErrorState title="Supabase is not configured" message={supabaseConfigError} tone="dark" />
           ) : null}
 
-          {formError ? <ErrorState title="Login failed" message={formError} /> : null}
+          {formError ? <ErrorState title="Login failed" message={formError} tone="dark" /> : null}
 
           <label className="block space-y-1.5">
-            <span className="label">Username</span>
+            <span className="glass-label">Username</span>
             <input
-              className="input"
+              className="glass-input"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               autoComplete="username"
             />
-            {errors.username ? <span className="text-xs text-red-700">{errors.username}</span> : null}
+            {errors.username ? <span className="text-xs text-red-400">{errors.username}</span> : null}
           </label>
 
           <label className="block space-y-1.5">
-            <span className="label">Password</span>
+            <span className="glass-label">Password</span>
             <input
-              className="input"
+              className="glass-input"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="current-password"
             />
-            {errors.password ? <span className="text-xs text-red-700">{errors.password}</span> : null}
+            {errors.password ? <span className="text-xs text-red-400">{errors.password}</span> : null}
           </label>
 
           <button
-            className="button-primary w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700"
+            className="glass-button-primary w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
             type="submit"
             disabled={submitting}
           >
@@ -115,9 +113,9 @@ export function LoginPage() {
             {submitting ? "Signing in" : "Sign in"}
           </button>
         </form>
-        <p className="mt-6 text-center text-sm text-slate-500">
+        <p className="mt-6 text-center text-sm text-slate-400">
           Have an invite code?{" "}
-          <Link to="/signup" className="font-semibold text-indigo-700 hover:text-indigo-800">
+          <Link to="/signup" className="font-semibold text-teal-300 hover:text-teal-200">
             Create an account
           </Link>
         </p>

@@ -13,10 +13,10 @@ interface ReportTableProps {
 }
 
 const conditionStyles: Record<Condition, string> = {
-  excellent: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  good: "bg-sky-100 text-sky-800 border-sky-200",
-  fair: "bg-amber-100 text-amber-800 border-amber-200",
-  poor: "bg-red-100 text-red-800 border-red-200",
+  excellent: "bg-emerald-400/10 text-emerald-300 border-emerald-400/20",
+  good: "bg-teal-400/10 text-teal-300 border-teal-400/20",
+  fair: "bg-amber-400/10 text-amber-300 border-amber-400/20",
+  poor: "bg-red-400/10 text-red-300 border-red-400/20",
 };
 
 export function ReportTable({ reports, mode = "public", onEdit }: ReportTableProps) {
@@ -25,6 +25,7 @@ export function ReportTable({ reports, mode = "public", onEdit }: ReportTablePro
       <EmptyState
         title="No reports yet"
         message="Reports will appear here as trusted users submit airport lot observations."
+        tone="dark"
       />
     );
   }
@@ -47,10 +48,10 @@ export function ReportTable({ reports, mode = "public", onEdit }: ReportTablePro
       </div>
 
       {/* Desktop table layout */}
-      <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-panel lg:block">
+      <div className="hidden overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] lg:block">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-100/70 text-left text-xs font-semibold uppercase tracking-normal text-slate-500">
+          <table className="min-w-full divide-y divide-white/10 text-sm">
+            <thead className="bg-white/[0.03] text-left text-xs font-semibold uppercase tracking-normal text-slate-400">
               <tr>
                 <th className="px-4 py-3">Vehicle</th>
                 <th className="px-4 py-3">Airport</th>
@@ -62,33 +63,33 @@ export function ReportTable({ reports, mode = "public", onEdit }: ReportTablePro
                 {showEdit ? <th className="px-4 py-3" /> : null}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-white/5">
               {rows.map(({ row, original, index }) => (
-                <tr key={`${row.airport}-${row.model}-${row.observed}-${index}`} className="transition hover:bg-indigo-50/40">
+                <tr key={`${row.airport}-${row.model}-${row.observed}-${index}`} className="transition hover:bg-teal-400/5">
                   <td className="whitespace-nowrap px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <CarMakeBadge make={row.make} size="sm" />
-                      <span className="font-semibold text-slate-950">
+                      <span className="font-semibold text-white">
                         {row.year ? `${row.year} ` : ""}
                         {row.make} {row.model}
                       </span>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 font-semibold text-slate-950">{row.airport}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{row.company}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatMileage(row.mileage)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 font-semibold text-white">{row.airport}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-400">{row.company}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-400">{formatMileage(row.mileage)}</td>
                   <td className="whitespace-nowrap px-4 py-3">
                     <ConditionPill condition={row.exterior} />
                   </td>
                   <td className="whitespace-nowrap px-4 py-3">
                     <ConditionPill condition={row.interior} />
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDate(row.observed)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-400">{formatDate(row.observed)}</td>
                   {showEdit ? (
                     <td className="whitespace-nowrap px-4 py-3 text-right">
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                        className="inline-flex items-center gap-1 rounded-full border border-white/15 px-2.5 py-1 text-xs font-semibold text-teal-300 transition hover:bg-teal-400/10"
                         onClick={() => onEdit?.(original as MyReportRow)}
                       >
                         <Pencil className="h-3 w-3" aria-hidden="true" />
@@ -108,7 +109,7 @@ export function ReportTable({ reports, mode = "public", onEdit }: ReportTablePro
 
 function ConditionPill({ condition }: { condition: Condition | null | undefined }) {
   if (!condition) {
-    return <span className="text-xs text-slate-400">Not reported</span>;
+    return <span className="text-xs text-slate-500">Not reported</span>;
   }
   return (
     <span
@@ -129,22 +130,22 @@ function ReportCard({
   onEdit?: () => void;
 }) {
   return (
-    <article className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-lg sm:p-5">
+    <article className="group glass-panel p-4 transition duration-150 hover:-translate-y-0.5 sm:p-5">
       <div className="flex items-start gap-3">
         <CarMakeBadge make={row.make} size="lg" />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-semibold text-slate-950 sm:text-lg">
+          <h3 className="truncate font-display text-base font-semibold text-white sm:text-lg">
             {row.year ? `${row.year} ` : ""}
             {row.make} {row.model}
           </h3>
-          <p className="mt-0.5 truncate text-sm text-slate-500">
+          <p className="mt-0.5 truncate text-sm text-slate-400">
             {row.company} at {row.airport}
           </p>
         </div>
         {onEdit ? (
           <button
             type="button"
-            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/15 px-2.5 py-1 text-xs font-semibold text-teal-300 transition hover:bg-teal-400/10"
             onClick={onEdit}
           >
             <Pencil className="h-3 w-3" aria-hidden="true" />
@@ -154,37 +155,37 @@ function ReportCard({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+        <span className="glass-pill bg-white/[0.06] text-slate-300">
           <MapPin className="h-3 w-3" aria-hidden="true" />
           {formatMileage(row.mileage)}
         </span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+        <span className="glass-pill bg-white/[0.06] text-slate-300">
           <Building2 className="h-3 w-3" aria-hidden="true" />
           {row.airport}
         </span>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-slate-400">Exterior</span>
+        <span className="text-xs font-medium text-slate-500">Exterior</span>
         <ConditionPill condition={row.exterior} />
-        <span className="text-xs font-medium text-slate-400">Interior</span>
+        <span className="text-xs font-medium text-slate-500">Interior</span>
         <ConditionPill condition={row.interior} />
       </div>
 
       {row.tireCondition || row.drivetrain || row.licensePlate ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {row.tireCondition ? (
-            <span className="text-xs font-medium text-slate-500">
+            <span className="text-xs font-medium text-slate-400">
               Tires: {formatTireCondition(row.tireCondition)}
             </span>
           ) : null}
           {row.drivetrain ? (
-            <span className="text-xs font-medium text-slate-500">
+            <span className="text-xs font-medium text-slate-400">
               Drivetrain: {formatDrivetrain(row.drivetrain)}
             </span>
           ) : null}
           {row.licensePlate ? (
-            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+            <span className="glass-pill bg-white/[0.06] uppercase tracking-wide text-slate-300">
               {row.licensePlateState ? `${row.licensePlateState} · ` : ""}
               {row.licensePlate}
             </span>
@@ -192,7 +193,7 @@ function ReportCard({
         </div>
       ) : null}
 
-      <p className="mt-3 text-xs font-medium text-slate-400">
+      <p className="mt-3 text-xs font-medium text-slate-500">
         {mode === "private" ? "Observed" : "Spotted"} {formatDate(row.observed)}
       </p>
     </article>

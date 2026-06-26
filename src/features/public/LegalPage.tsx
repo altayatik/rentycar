@@ -38,35 +38,35 @@ const sections = [
 export function LegalPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <section className="panel p-6 sm:p-8">
-        <p className="text-sm font-semibold uppercase tracking-normal text-indigo-700">Legal</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+      <section className="glass-panel p-6 sm:p-8">
+        <p className="text-sm font-semibold uppercase tracking-normal text-teal-300">Legal</p>
+        <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
           Practical disclaimers for early testing.
         </h1>
-        <p className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+        <p className="mt-5 rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-200">
           This page is a practical disclaimer for an early hobby project and is not legal advice.
         </p>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
         {sections.map((section) => (
-          <article key={section.title} className="panel p-5">
-            <h2 className="text-lg font-semibold text-slate-950">{section.title}</h2>
-            <p className="mt-3 text-sm leading-7 text-slate-600">{section.body}</p>
+          <article key={section.title} className="glass-panel p-5">
+            <h2 className="font-display text-lg font-semibold text-white">{section.title}</h2>
+            <p className="mt-3 text-sm leading-7 text-slate-400">{section.body}</p>
           </article>
         ))}
       </section>
 
-      <section className="panel p-6 sm:p-8">
-        <h2 className="text-lg font-semibold text-slate-950">Contact</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+      <section className="glass-panel p-6 sm:p-8">
+        <h2 className="font-display text-lg font-semibold text-white">Contact</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-400">
           For corrections, removal requests, or other questions about RentyCar, reach out below.
         </p>
-        <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+        <p className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs leading-5 text-amber-200">
           Note: this inbox is not operational yet — this page is still in development.
         </p>
         <a
-          className="button-primary mt-4 inline-flex w-fit"
+          className="glass-button-primary mt-4 inline-flex w-fit"
           href="mailto:rentycar@altayatik.com"
         >
           <Mail className="h-4 w-4" aria-hidden="true" />

@@ -1,10 +1,11 @@
-import { ArrowLeft, CarFront, UserPlus } from "lucide-react";
+import { ArrowLeft, UserPlus } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { ErrorState } from "../../components/ErrorState";
 import { useAuth } from "./authStore";
 import { isSupabaseConfigured, supabaseConfigError } from "../../lib/supabase";
 import { signupSchema } from "../../lib/validators";
+import logo from "../../assets/logo.png";
 
 type SignupErrors = Partial<Record<"username" | "nickname" | "password" | "inviteCode", string>>;
 
@@ -57,91 +58,89 @@ export function SignupPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-indigo-50 via-slate-50 to-slate-50 px-4 py-10">
+    <div className="night-shell flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <Link
           to="/"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700"
+          className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-slate-400 transition hover:text-teal-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to RentyCar
         </Link>
 
-        <Link to="/" className="mb-8 flex items-center justify-center gap-2 text-xl font-bold text-slate-950">
-          <span className="rounded-lg bg-indigo-700 p-2 text-white">
-            <CarFront className="h-5 w-5" aria-hidden="true" />
-          </span>
+        <Link to="/" className="mb-8 flex items-center justify-center gap-2.5 font-display text-xl font-bold text-white">
+          <img src={logo} alt="RentyCar" className="h-12 w-12 rounded-2xl shadow-glass" />
           RentyCar
         </Link>
 
-        <form className="panel space-y-6 p-6 sm:p-8" onSubmit={handleSubmit}>
+        <form className="glass-panel space-y-6 p-6 sm:p-8" onSubmit={handleSubmit}>
           <div className="text-center">
-            <h1 className="text-2xl font-semibold text-slate-950">Create account</h1>
-            <p className="mt-2 text-sm text-slate-500">
+            <h1 className="font-display text-2xl font-semibold text-white">Create account</h1>
+            <p className="mt-2 text-sm text-slate-400">
               Use an invite code. RentyCar only needs a username, nickname, and password.
             </p>
           </div>
 
           {!isSupabaseConfigured ? (
-            <ErrorState title="Supabase is not configured" message={supabaseConfigError} />
+            <ErrorState title="Supabase is not configured" message={supabaseConfigError} tone="dark" />
           ) : null}
 
-          {formError ? <ErrorState title="Signup failed" message={formError} /> : null}
+          {formError ? <ErrorState title="Signup failed" message={formError} tone="dark" /> : null}
 
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">
+          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm leading-6 text-amber-200">
             RentyCar does not collect email addresses or recovery details. If a password is forgotten, there is
             currently no way to reset it.
           </div>
 
           <label className="block space-y-1.5">
-            <span className="label">Username</span>
+            <span className="glass-label">Username</span>
             <input
-              className="input"
+              className="glass-input"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               autoComplete="username"
               autoCorrect="off"
             />
-            {errors.username ? <span className="text-xs text-red-700">{errors.username}</span> : null}
+            {errors.username ? <span className="text-xs text-red-400">{errors.username}</span> : null}
           </label>
 
           <label className="block space-y-1.5">
-            <span className="label">Nickname</span>
+            <span className="glass-label">Nickname</span>
             <input
-              className="input"
+              className="glass-input"
               value={nickname}
               onChange={(event) => setNickname(event.target.value)}
               autoCorrect="off"
             />
-            {errors.nickname ? <span className="text-xs text-red-700">{errors.nickname}</span> : null}
+            {errors.nickname ? <span className="text-xs text-red-400">{errors.nickname}</span> : null}
           </label>
 
           <label className="block space-y-1.5">
-            <span className="label">Password</span>
+            <span className="glass-label">Password</span>
             <input
-              className="input"
+              className="glass-input"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="new-password"
             />
-            {errors.password ? <span className="text-xs text-red-700">{errors.password}</span> : null}
+            {errors.password ? <span className="text-xs text-red-400">{errors.password}</span> : null}
           </label>
 
           <label className="block space-y-1.5">
-            <span className="label">Invite code</span>
+            <span className="glass-label">Invite code</span>
             <input
-              className="input"
+              className="glass-input"
               value={inviteCode}
               onChange={(event) => setInviteCode(event.target.value)}
               autoCorrect="off"
               autoCapitalize="characters"
             />
-            {errors.inviteCode ? <span className="text-xs text-red-700">{errors.inviteCode}</span> : null}
+            {errors.inviteCode ? <span className="text-xs text-red-400">{errors.inviteCode}</span> : null}
           </label>
 
           <button
-            className="button-primary w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700"
+            className="glass-button-primary w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
             type="submit"
             disabled={submitting}
           >
@@ -150,9 +149,9 @@ export function SignupPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-500">
+        <p className="mt-6 text-center text-sm text-slate-400">
           Already have an account?{" "}
-          <Link to="/login" className="font-semibold text-indigo-700 hover:text-indigo-800">
+          <Link to="/login" className="font-semibold text-teal-300 hover:text-teal-200">
             Sign in
           </Link>
         </p>

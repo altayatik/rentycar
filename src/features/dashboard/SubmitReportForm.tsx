@@ -305,22 +305,23 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
       <ErrorState
         title="Supabase is not configured"
         message={supabaseConfigError}
+        tone="dark"
       />
     );
   }
 
   if (loading) {
-    return <LoadingState label="Loading report form" />;
+    return <LoadingState label="Loading report form" tone="dark" />;
   }
 
   return (
-    <form className="panel space-y-6 p-5 sm:p-6" onSubmit={handleSubmit}>
-      <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+    <form className="glass-panel space-y-6 p-5 sm:p-6" onSubmit={handleSubmit}>
+      <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-4">
         <div>
-          <h2 className="text-xl font-semibold text-slate-950">
+          <h2 className="font-display text-xl font-semibold text-white">
             {editingReport ? "Edit rental car report" : "Submit rental car report"}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-400">
             {editingReport
               ? "Update the details of this report."
               : "Add an observed vehicle from an airport rental lot."}
@@ -329,7 +330,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
         {editingReport ? (
           <button
             type="button"
-            className="button-secondary"
+            className="glass-button-secondary"
             onClick={() => onCancelEdit?.()}
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -338,9 +339,9 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
         ) : null}
       </div>
 
-      {formError ? <ErrorState title="Could not submit report" message={formError} /> : null}
+      {formError ? <ErrorState title="Could not submit report" message={formError} tone="dark" /> : null}
       {success ? (
-        <div className="rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm text-teal-800">
+        <div className="rounded-xl border border-teal-400/20 bg-teal-400/10 p-4 text-sm text-teal-300">
           {success}
         </div>
       ) : null}
@@ -464,7 +465,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
       </div>
 
       <label className="block space-y-1.5">
-        <span className="label">
+        <span className="glass-label">
           Fuel / battery level{values.fuel_level_percent ? `: ${values.fuel_level_percent}%` : " (optional)"}
         </span>
         <input
@@ -480,18 +481,18 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           onChange={(event) => update("fuel_level_percent", event.target.value)}
         />
         {errors.fuel_level_percent ? (
-          <span className="text-xs text-red-700">{errors.fuel_level_percent}</span>
+          <span className="text-xs text-red-400">{errors.fuel_level_percent}</span>
         ) : null}
       </label>
 
       <fieldset className="space-y-2">
-        <legend className="label">Driver assistance features</legend>
+        <legend className="glass-label">Driver assistance features</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {adasOptions.map((option) => (
-            <label key={option.key} className="flex items-center gap-2 text-sm text-slate-700">
+            <label key={option.key} className="flex items-center gap-2 text-sm text-slate-300">
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded border-slate-300"
+                className="h-4 w-4 rounded border-white/20 bg-white/5 text-teal-400 focus:ring-teal-400"
                 checked={values[option.key]}
                 onChange={() => toggleAdas(option.key)}
               />
@@ -519,7 +520,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
 
       <div className="flex flex-wrap items-center gap-3">
         <button
-          className="button-primary w-full bg-emerald-600 hover:bg-emerald-700 focus-visible:ring-emerald-600 sm:w-auto"
+          className="glass-button-primary w-full sm:w-auto"
           type="submit"
           disabled={submitting}
         >
@@ -527,7 +528,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           {submitting ? "Saving" : editingReport ? "Update report" : "Submit report"}
         </button>
         {editingReport ? (
-          <button type="button" className="button-secondary" onClick={() => onCancelEdit?.()}>
+          <button type="button" className="glass-button-secondary" onClick={() => onCancelEdit?.()}>
             Cancel
           </button>
         ) : null}
@@ -562,11 +563,11 @@ function RequiredMark() {
 function SelectField({ label, value, error, options, onChange, required }: SelectFieldProps) {
   return (
     <label className="block space-y-1.5">
-      <span className="label">
+      <span className="glass-label">
         {label}
         {required ? <RequiredMark /> : null}
       </span>
-      <select className="input" value={value} onChange={(event) => onChange(event.target.value)}>
+      <select className="glass-input" value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">Choose</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -574,7 +575,7 @@ function SelectField({ label, value, error, options, onChange, required }: Selec
           </option>
         ))}
       </select>
-      {error ? <span className="text-xs text-red-700">{error}</span> : null}
+      {error ? <span className="text-xs text-red-400">{error}</span> : null}
     </label>
   );
 }
@@ -591,11 +592,11 @@ interface GroupedSelectFieldProps {
 function GroupedSelectField({ label, value, error, groups, onChange, required }: GroupedSelectFieldProps) {
   return (
     <label className="block space-y-1.5">
-      <span className="label">
+      <span className="glass-label">
         {label}
         {required ? <RequiredMark /> : null}
       </span>
-      <select className="input" value={value} onChange={(event) => onChange(event.target.value)}>
+      <select className="glass-input" value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">Choose</option>
         {groups.map((group) => (
           <optgroup key={group.label} label={group.label}>
@@ -607,7 +608,7 @@ function GroupedSelectField({ label, value, error, groups, onChange, required }:
           </optgroup>
         ))}
       </select>
-      {error ? <span className="text-xs text-red-700">{error}</span> : null}
+      {error ? <span className="text-xs text-red-400">{error}</span> : null}
     </label>
   );
 }
@@ -644,9 +645,9 @@ interface InputFieldProps {
 function InputField({ label, value, error, type = "text", onChange }: InputFieldProps) {
   return (
     <label className="block space-y-1.5">
-      <span className="label">{label}</span>
-      <input className="input" type={type} value={value} onChange={(event) => onChange(event.target.value)} />
-      {error ? <span className="text-xs text-red-700">{error}</span> : null}
+      <span className="glass-label">{label}</span>
+      <input className="glass-input" type={type} value={value} onChange={(event) => onChange(event.target.value)} />
+      {error ? <span className="text-xs text-red-400">{error}</span> : null}
     </label>
   );
 }

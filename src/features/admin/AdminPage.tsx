@@ -87,28 +87,28 @@ export function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <section className="panel flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center">
+      <section className="glass-panel flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-normal text-indigo-700">Admin</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-950">RentyCar operations</h1>
-          <p className="mt-2 max-w-2xl text-slate-600">
+          <p className="text-sm font-semibold uppercase tracking-normal text-teal-300">Admin</p>
+          <h1 className="mt-2 font-display text-3xl font-semibold text-white">RentyCar operations</h1>
+          <p className="mt-2 max-w-2xl text-slate-400">
             Manage reference data and moderate submitted rental car reports.
           </p>
         </div>
-        <button className="button-secondary self-start sm:self-auto" type="button" onClick={loadData}>
+        <button className="glass-button-secondary self-start sm:self-auto" type="button" onClick={loadData}>
           <RefreshCw className="h-4 w-4" aria-hidden="true" />
           Refresh
         </button>
       </section>
 
-      {error ? <ErrorState message={error} /> : null}
+      {error ? <ErrorState message={error} tone="dark" /> : null}
 
-      <div className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-panel">
+      <div className="flex gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-2">
         {tabs.map((item) => (
           <button
             key={item.id}
             className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${
-              tab === item.id ? "bg-indigo-700 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+              tab === item.id ? "bg-teal-400/15 text-teal-300" : "text-slate-400 hover:bg-white/10 hover:text-white"
             }`}
             type="button"
             onClick={() => setTab(item.id)}
@@ -119,7 +119,7 @@ export function AdminPage() {
       </div>
 
       {loading ? (
-        <LoadingState label="Loading admin data" />
+        <LoadingState label="Loading admin data" tone="dark" />
       ) : (
         <>
           {tab === "airports" ? <AirportManager airports={airports} onChanged={loadData} /> : null}
@@ -204,15 +204,15 @@ function AirportManager({ airports, onChanged }: { airports: Airport[]; onChange
 
   return (
     <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
-      <form className="panel space-y-4 p-5" onSubmit={submit}>
-        <h2 className="text-lg font-semibold text-slate-950">{editingId ? "Edit airport" : "Add airport"}</h2>
-        {error ? <ErrorState message={error} /> : null}
+      <form className="glass-panel space-y-4 p-5" onSubmit={submit}>
+        <h2 className="font-display text-lg font-semibold text-white">{editingId ? "Edit airport" : "Add airport"}</h2>
+        {error ? <ErrorState message={error} tone="dark" /> : null}
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="IATA" value={form.iata_code} onChange={(value) => setForm({ ...form, iata_code: value })} />
           <label className="block space-y-1.5">
-            <span className="label">Country</span>
+            <span className="glass-label">Country</span>
             <select
-              className="input"
+              className="glass-input"
               value={form.country}
               onChange={(event) => setForm({ ...form, country: event.target.value as "US" | "CA" })}
             >
@@ -242,18 +242,18 @@ function AirportManager({ airports, onChanged }: { airports: Airport[]; onChange
         />
         <ActiveToggle checked={form.is_active} onChange={(value) => setForm({ ...form, is_active: value })} />
         <div className="flex gap-2">
-          <button className="button-primary" type="submit">
+          <button className="glass-button-primary" type="submit">
             {editingId ? "Save airport" : "Add airport"}
           </button>
           {editingId ? (
-            <button className="button-secondary" type="button" onClick={reset}>
+            <button className="glass-button-secondary" type="button" onClick={reset}>
               Cancel
             </button>
           ) : null}
         </div>
       </form>
 
-      <div className="panel overflow-hidden">
+      <div className="glass-panel overflow-hidden">
         <AdminTable
           headers={["IATA", "Name", "City", "Country", "Region", "Commercial", "Active", ""]}
           rows={airports.map((airport) => [
@@ -264,7 +264,7 @@ function AirportManager({ airports, onChanged }: { airports: Airport[]; onChange
             `${airport.region_code ?? airport.state} - ${airport.region_name ?? airport.state}`,
             airport.is_commercial ? "Yes" : "No",
             airport.is_active ? "Yes" : "No",
-            <button className="button-secondary px-3 py-1.5" type="button" onClick={() => edit(airport)}>
+            <button className="glass-button-secondary px-3 py-1.5" type="button" onClick={() => edit(airport)}>
               <Edit className="h-4 w-4" aria-hidden="true" />
               Edit
             </button>,
@@ -325,15 +325,15 @@ function NamedManager({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-      <form className="panel space-y-4 p-5" onSubmit={submit}>
-        <h2 className="text-lg font-semibold text-slate-950">{editingId ? `Edit ${title}` : `Add ${title}`}</h2>
-        {error ? <ErrorState message={error} /> : null}
+      <form className="glass-panel space-y-4 p-5" onSubmit={submit}>
+        <h2 className="font-display text-lg font-semibold text-white">{editingId ? `Edit ${title}` : `Add ${title}`}</h2>
+        {error ? <ErrorState message={error} tone="dark" /> : null}
         <Field label="Name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
         {table === "rental_companies" ? (
           <label className="block space-y-1.5">
-            <span className="label">Type</span>
+            <span className="glass-label">Type</span>
             <select
-              className="input"
+              className="glass-input"
               value={form.type}
               onChange={(event) => setForm({ ...form, type: event.target.value as RentalCompanyType })}
             >
@@ -345,12 +345,12 @@ function NamedManager({
         ) : null}
         <ActiveToggle checked={form.is_active} onChange={(value) => setForm({ ...form, is_active: value })} />
         <div className="flex gap-2">
-          <button className="button-primary" type="submit">
+          <button className="glass-button-primary" type="submit">
             Save
           </button>
           {editingId ? (
             <button
-              className="button-secondary"
+              className="glass-button-secondary"
               type="button"
               onClick={() => {
                 setEditingId(null);
@@ -362,7 +362,7 @@ function NamedManager({
           ) : null}
         </div>
       </form>
-      <div className="panel overflow-hidden">
+      <div className="glass-panel overflow-hidden">
         <AdminTable
           headers={table === "rental_companies" ? ["Name", "Type", "Active", ""] : ["Name", "Active", ""]}
           rows={rows.map((row) => [
@@ -370,7 +370,7 @@ function NamedManager({
             ...(table === "rental_companies" ? [("type" in row ? row.type : "traditional_rental")] : []),
             row.is_active ? "Yes" : "No",
             <button
-              className="button-secondary px-3 py-1.5"
+              className="glass-button-secondary px-3 py-1.5"
               type="button"
               onClick={() => {
                 setEditingId(row.id);
@@ -427,12 +427,12 @@ function ModelManager({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-      <form className="panel space-y-4 p-5" onSubmit={submit}>
-        <h2 className="text-lg font-semibold text-slate-950">{editingId ? "Edit model" : "Add model"}</h2>
-        {error ? <ErrorState message={error} /> : null}
+      <form className="glass-panel space-y-4 p-5" onSubmit={submit}>
+        <h2 className="font-display text-lg font-semibold text-white">{editingId ? "Edit model" : "Add model"}</h2>
+        {error ? <ErrorState message={error} tone="dark" /> : null}
         <label className="block space-y-1.5">
-          <span className="label">Make</span>
-          <select className="input" value={form.make_id} onChange={(event) => setForm({ ...form, make_id: event.target.value })}>
+          <span className="glass-label">Make</span>
+          <select className="glass-input" value={form.make_id} onChange={(event) => setForm({ ...form, make_id: event.target.value })}>
             <option value="">Choose</option>
             {makes.map((make) => (
               <option key={make.id} value={make.id}>
@@ -444,12 +444,12 @@ function ModelManager({
         <Field label="Model" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
         <ActiveToggle checked={form.is_active} onChange={(value) => setForm({ ...form, is_active: value })} />
         <div className="flex gap-2">
-          <button className="button-primary" type="submit">
+          <button className="glass-button-primary" type="submit">
             Save
           </button>
           {editingId ? (
             <button
-              className="button-secondary"
+              className="glass-button-secondary"
               type="button"
               onClick={() => {
                 setEditingId(null);
@@ -461,7 +461,7 @@ function ModelManager({
           ) : null}
         </div>
       </form>
-      <div className="panel overflow-hidden">
+      <div className="glass-panel overflow-hidden">
         <AdminTable
           headers={["Make", "Model", "Active", ""]}
           rows={models.map((model) => [
@@ -469,7 +469,7 @@ function ModelManager({
             model.name,
             model.is_active ? "Yes" : "No",
             <button
-              className="button-secondary px-3 py-1.5"
+              className="glass-button-secondary px-3 py-1.5"
               type="button"
               onClick={() => {
                 setEditingId(model.id);
@@ -504,13 +504,13 @@ function ReportManager({ reports, onChanged }: { reports: MyReportRow[]; onChang
   };
 
   if (!reports.length) {
-    return <EmptyState title="No reports" message="Submitted reports will appear here." />;
+    return <EmptyState title="No reports" message="Submitted reports will appear here." tone="dark" />;
   }
 
   return (
     <div className="space-y-4">
-      {error ? <ErrorState message={error} /> : null}
-      <div className="panel overflow-hidden">
+      {error ? <ErrorState message={error} tone="dark" /> : null}
+      <div className="glass-panel overflow-hidden">
         <AdminTable
           headers={["Airport", "Company", "Vehicle", "Mileage", "Condition", "Observed", "Deleted", ""]}
           rows={reports.map((report) => [
@@ -522,9 +522,9 @@ function ReportManager({ reports, onChanged }: { reports: MyReportRow[]; onChang
             formatDate(report.observed_at),
             report.deleted_at ? formatDate(report.deleted_at) : "No",
             report.deleted_at ? (
-              <span className="text-sm text-slate-400">Deleted</span>
+              <span className="text-sm text-slate-500">Deleted</span>
             ) : (
-              <button className="button-secondary px-3 py-1.5" type="button" onClick={() => softDelete(report.id)}>
+              <button className="glass-button-secondary px-3 py-1.5" type="button" onClick={() => softDelete(report.id)}>
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
                 Soft-delete
               </button>
@@ -549,8 +549,8 @@ function Field({
 }) {
   return (
     <label className={`block space-y-1.5 ${span ? "sm:col-span-2" : ""}`}>
-      <span className="label">{label}</span>
-      <input className="input" value={value} onChange={(event) => onChange(event.target.value)} />
+      <span className="glass-label">{label}</span>
+      <input className="glass-input" value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
 }
@@ -565,9 +565,9 @@ function ActiveToggle({
   label?: string;
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+    <label className="flex items-center gap-2 text-sm font-medium text-slate-300">
       <input
-        className="h-4 w-4 rounded border-slate-300 text-indigo-700 focus:ring-indigo-600"
+        className="h-4 w-4 rounded border-white/20 bg-white/5 text-teal-400 focus:ring-teal-400"
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
@@ -580,8 +580,8 @@ function ActiveToggle({
 function AdminTable({ headers, rows }: { headers: string[]; rows: Array<Array<React.ReactNode>> }) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-100/70 text-left text-xs font-semibold uppercase tracking-normal text-slate-500">
+      <table className="min-w-full divide-y divide-white/10 text-sm">
+        <thead className="bg-white/[0.03] text-left text-xs font-semibold uppercase tracking-normal text-slate-400">
           <tr>
             {headers.map((header) => (
               <th key={header} className="px-4 py-3">
@@ -590,11 +590,11 @@ function AdminTable({ headers, rows }: { headers: string[]; rows: Array<Array<Re
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-white/5">
           {rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="transition hover:bg-indigo-50/40">
+            <tr key={rowIndex} className="transition hover:bg-teal-400/5">
               {row.map((cell, cellIndex) => (
-                <td key={cellIndex} className="whitespace-nowrap px-4 py-3 text-slate-700">
+                <td key={cellIndex} className="whitespace-nowrap px-4 py-3 text-slate-300">
                   {cell}
                 </td>
               ))}

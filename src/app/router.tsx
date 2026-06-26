@@ -18,7 +18,7 @@ export const router = createBrowserRouter(
     {
       path: "/",
       element: (
-        <AppShell>
+        <AppShell variant="light">
           <HomePage />
         </AppShell>
       ),
