@@ -19,6 +19,7 @@ import { formatMonthYear } from "../../lib/formatters";
 import { supabase } from "../../lib/supabase";
 import type { MyReportRow } from "../../lib/types";
 import { useAuth } from "../auth/authStore";
+import { useTheme } from "../theme/themeStore";
 
 interface Achievement {
   title: string;
@@ -30,6 +31,8 @@ interface Achievement {
 
 export function StampsPage() {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [reports, setReports] = useState<MyReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -68,11 +71,11 @@ export function StampsPage() {
   const achievements = useMemo(() => buildAchievements(reports, stats), [reports, stats]);
 
   if (loading) {
-    return <LoadingState label="Stamping your rental book" tone="dark" />;
+    return <LoadingState label="Stamping your rental book" tone={isDark ? "dark" : "light"} />;
   }
 
   if (error) {
-    return <ErrorState title="Could not load Stamps" message={error} tone="dark" />;
+    return <ErrorState title="Could not load Stamps" message={error} tone={isDark ? "dark" : "light"} />;
   }
 
   if (reports.length === 0) {
@@ -80,47 +83,57 @@ export function StampsPage() {
       <EmptyState
         title="No stamps yet"
         message="Submit your first rental sighting and your stamp book starts filling up."
-        tone="dark"
+        tone={isDark ? "dark" : "light"}
       />
     );
   }
 
   return (
     <div className="space-y-8">
-      <section className="glass-panel p-6">
-        <p className="text-sm font-semibold uppercase tracking-normal text-teal-300">Stamps</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold text-white">{reports.length} stamps</h1>
-        <p className="mt-2 max-w-2xl text-slate-400">
+      <section className={isDark ? "glass-panel p-6" : "panel p-6"}>
+        <p className={`text-sm font-semibold uppercase tracking-normal ${isDark ? "text-teal-300" : "text-indigo-700"}`}>
+          Stamps
+        </p>
+        <h1 className={`mt-2 text-3xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
+          {reports.length} stamps
+        </h1>
+        <p className={`mt-2 max-w-2xl ${isDark ? "text-slate-400" : "text-slate-600"}`}>
           Every report adds a little airport-lot memory to your stamp book.
         </p>
       </section>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <StatPill label="Most rented brand" value={stats.favoriteMake} icon={<Award className="h-4 w-4" />} />
-        <StatPill label="Top company" value={stats.favoriteCompany} icon={<Building2 className="h-4 w-4" />} />
-        <StatPill label="Top airport" value={stats.favoriteAirport} icon={<PlaneTakeoff className="h-4 w-4" />} />
-        <StatPill label="Lowest mileage" value={stats.lowestMileage} icon={<Gauge className="h-4 w-4" />} />
-        <StatPill label="Brands tried" value={String(stats.uniqueMakes)} icon={<Sparkles className="h-4 w-4" />} />
-        <StatPill label="Latest rental" value={stats.latestRental} icon={<Calendar className="h-4 w-4" />} />
+        <StatPill label="Most rented brand" value={stats.favoriteMake} icon={<Award className="h-4 w-4" />} isDark={isDark} />
+        <StatPill label="Top company" value={stats.favoriteCompany} icon={<Building2 className="h-4 w-4" />} isDark={isDark} />
+        <StatPill label="Top airport" value={stats.favoriteAirport} icon={<PlaneTakeoff className="h-4 w-4" />} isDark={isDark} />
+        <StatPill label="Lowest mileage" value={stats.lowestMileage} icon={<Gauge className="h-4 w-4" />} isDark={isDark} />
+        <StatPill label="Brands tried" value={String(stats.uniqueMakes)} icon={<Sparkles className="h-4 w-4" />} isDark={isDark} />
+        <StatPill label="Latest rental" value={stats.latestRental} icon={<Calendar className="h-4 w-4" />} isDark={isDark} />
       </div>
 
-      <section className="glass-panel p-6">
-        <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-white">
-          <Award className="h-5 w-5 text-teal-300" aria-hidden="true" />
+      <section className={isDark ? "glass-panel p-6" : "panel p-6"}>
+        <h2
+          className={`flex items-center gap-2 text-lg font-semibold ${
+            isDark ? "font-display text-white" : "text-slate-950"
+          }`}
+        >
+          <Award className={`h-5 w-5 ${isDark ? "text-teal-300" : "text-indigo-700"}`} aria-hidden="true" />
           Achievements
         </h2>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {achievements.map((achievement) => (
-            <AchievementTile key={achievement.title} achievement={achievement} />
+            <AchievementTile key={achievement.title} achievement={achievement} isDark={isDark} />
           ))}
         </div>
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-display text-lg font-semibold text-white">Stamp history</h2>
+        <h2 className={`text-lg font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
+          Stamp history
+        </h2>
         <div className="space-y-2">
           {reports.map((report) => (
-            <StampRow key={report.id} report={report} />
+            <StampRow key={report.id} report={report} theme={theme} />
           ))}
         </div>
       </section>
@@ -221,47 +234,78 @@ function mostCommon(values: string[]): string | null {
   return Object.entries(counts).sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))[0][0];
 }
 
-function StatPill({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
+function StatPill({
+  label,
+  value,
+  icon,
+  isDark,
+}: {
+  label: string;
+  value: string;
+  icon: ReactNode;
+  isDark: boolean;
+}) {
   return (
-    <div className="glass-panel p-4">
-      <div className="flex items-center gap-2 text-teal-300">{icon}</div>
-      <p className="mt-2 truncate text-base font-semibold text-white">{value}</p>
-      <p className="text-xs text-slate-400">{label}</p>
+    <div className={isDark ? "glass-panel p-4" : "panel p-4"}>
+      <div className={`flex items-center gap-2 ${isDark ? "text-teal-300" : "text-indigo-700"}`}>{icon}</div>
+      <p className={`mt-2 truncate text-base font-semibold ${isDark ? "text-white" : "text-slate-950"}`}>{value}</p>
+      <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{label}</p>
     </div>
   );
 }
 
-function AchievementTile({ achievement }: { achievement: Achievement }) {
+function AchievementTile({ achievement, isDark }: { achievement: Achievement; isDark: boolean }) {
   return (
     <div
       className={`rounded-2xl border p-3 ${
-        achievement.isUnlocked ? "border-teal-400/25 bg-teal-400/10" : "border-white/10 bg-white/[0.03]"
+        isDark
+          ? achievement.isUnlocked
+            ? "border-teal-400/25 bg-teal-400/10"
+            : "border-white/10 bg-white/[0.03]"
+          : achievement.isUnlocked
+            ? "border-indigo-100 bg-indigo-50"
+            : "border-slate-200 bg-slate-50"
       }`}
       title={achievement.detail}
     >
-      <span className={`inline-flex ${achievement.isUnlocked ? "text-teal-300" : "text-slate-500"}`}>
+      <span
+        className={`inline-flex ${
+          isDark
+            ? achievement.isUnlocked
+              ? "text-teal-300"
+              : "text-slate-500"
+            : achievement.isUnlocked
+              ? "text-indigo-700"
+              : "text-slate-400"
+        }`}
+      >
         {achievement.isUnlocked ? achievement.icon : <Lock className="h-5 w-5" />}
       </span>
-      <p className="mt-2 truncate text-sm font-semibold text-white">{achievement.title}</p>
-      <p className="text-xs text-slate-400">{achievement.subtitle}</p>
+      <p className={`mt-2 truncate text-sm font-semibold ${isDark ? "text-white" : "text-slate-950"}`}>
+        {achievement.title}
+      </p>
+      <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{achievement.subtitle}</p>
     </div>
   );
 }
 
-function StampRow({ report }: { report: MyReportRow }) {
+function StampRow({ report, theme }: { report: MyReportRow; theme: "light" | "dark" }) {
+  const isDark = theme === "dark";
   const make = report.car_makes?.name ?? "Unknown";
   const model = report.car_models?.name ?? "vehicle";
   const title = [report.year, make, model].filter(Boolean).join(" ");
   const subtitle = `${report.rental_companies?.name ?? "Company"} at ${report.airports?.iata_code ?? "Airport"}`;
 
   return (
-    <div className="glass-panel flex items-center gap-3 p-3">
-      <CarMakeBadge make={make} size="sm" />
+    <div className={isDark ? "glass-panel flex items-center gap-3 p-3" : "panel flex items-center gap-3 p-3"}>
+      <CarMakeBadge make={make} size="sm" theme={theme} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-white">{title}</p>
-        <p className="truncate text-xs text-slate-400">{subtitle}</p>
+        <p className={`truncate text-sm font-semibold ${isDark ? "text-white" : "text-slate-950"}`}>{title}</p>
+        <p className={`truncate text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{subtitle}</p>
       </div>
-      <span className="glass-pill bg-teal-400/15 text-teal-300">
+      <span
+        className={`glass-pill ${isDark ? "bg-teal-400/15 text-teal-300" : "bg-indigo-50 text-indigo-700"}`}
+      >
         {formatMonthYear(report.observed_at)}
       </span>
     </div>

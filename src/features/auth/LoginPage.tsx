@@ -6,11 +6,14 @@ import { useAuth } from "./authStore";
 import { isSupabaseConfigured, supabaseConfigError } from "../../lib/supabase";
 import { loginSchema } from "../../lib/validators";
 import logo from "../../assets/logo.png";
+import { useTheme } from "../theme/themeStore";
 
 type LoginErrors = Partial<Record<"username" | "password", string>>;
 
 export function LoginPage() {
   const { user, signIn } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState("");
@@ -52,39 +55,58 @@ export function LoginPage() {
   };
 
   return (
-    <div className="night-shell flex min-h-screen items-center justify-center px-4 py-10">
+    <div
+      className={`flex min-h-screen items-center justify-center px-4 py-10 ${
+        isDark ? "night-shell" : "bg-slate-50"
+      }`}
+    >
       <div className="w-full max-w-md">
         <Link
           to="/"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-slate-400 transition hover:text-teal-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
+          className={`mb-6 inline-flex items-center gap-1.5 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+            isDark
+              ? "text-slate-400 hover:text-teal-300 focus-visible:outline-teal-400"
+              : "text-slate-500 hover:text-indigo-700 focus-visible:outline-indigo-700"
+          }`}
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to RentyCar
         </Link>
 
-        <Link to="/" className="mb-8 flex items-center justify-center gap-2.5 font-display text-xl font-bold text-white">
-          <img src={logo} alt="RentyCar" className="h-12 w-12 rounded-2xl shadow-glass" />
+        <Link
+          to="/"
+          className={`mb-8 flex items-center justify-center gap-2.5 text-xl font-bold ${
+            isDark ? "font-display text-white" : "text-slate-950"
+          }`}
+        >
+          <img
+            src={logo}
+            alt="RentyCar"
+            className={`h-12 w-12 rounded-2xl ${isDark ? "shadow-glass" : "shadow-md"}`}
+          />
           RentyCar
         </Link>
 
-        <form className="glass-panel space-y-6 p-6 sm:p-8" onSubmit={handleSubmit}>
+        <form className={isDark ? "glass-panel space-y-6 p-6 sm:p-8" : "panel space-y-6 p-6 sm:p-8"} onSubmit={handleSubmit}>
           <div className="text-center">
-            <h1 className="font-display text-2xl font-semibold text-white">Sign in</h1>
-            <p className="mt-2 text-sm text-slate-400">
+            <h1 className={`text-2xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
+              Sign in
+            </h1>
+            <p className={`mt-2 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
               Use your RentyCar account, or create one with an invite code.
             </p>
           </div>
 
           {!isSupabaseConfigured ? (
-            <ErrorState title="Supabase is not configured" message={supabaseConfigError} tone="dark" />
+            <ErrorState title="Supabase is not configured" message={supabaseConfigError} tone={isDark ? "dark" : "light"} />
           ) : null}
 
-          {formError ? <ErrorState title="Login failed" message={formError} tone="dark" /> : null}
+          {formError ? <ErrorState title="Login failed" message={formError} tone={isDark ? "dark" : "light"} /> : null}
 
           <label className="block space-y-1.5">
-            <span className="glass-label">Username</span>
+            <span className={isDark ? "glass-label" : "label"}>Username</span>
             <input
-              className="glass-input"
+              className={isDark ? "glass-input" : "input"}
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               autoComplete="username"
@@ -93,9 +115,9 @@ export function LoginPage() {
           </label>
 
           <label className="block space-y-1.5">
-            <span className="glass-label">Password</span>
+            <span className={isDark ? "glass-label" : "label"}>Password</span>
             <input
-              className="glass-input"
+              className={isDark ? "glass-input" : "input"}
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
@@ -105,7 +127,11 @@ export function LoginPage() {
           </label>
 
           <button
-            className="glass-button-primary w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
+            className={`${
+              isDark ? "glass-button-primary" : "button-primary"
+            } w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+              isDark ? "focus-visible:outline-teal-400" : "focus-visible:outline-indigo-700"
+            }`}
             type="submit"
             disabled={submitting}
           >
@@ -113,13 +139,16 @@ export function LoginPage() {
             {submitting ? "Signing in" : "Sign in"}
           </button>
         </form>
-        <p className="mt-6 text-center text-sm text-slate-400">
+        <p className={`mt-6 text-center text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
           Have an invite code?{" "}
-          <Link to="/signup" className="font-semibold text-teal-300 hover:text-teal-200">
+          <Link
+            to="/signup"
+            className={`font-semibold ${isDark ? "text-teal-300 hover:text-teal-200" : "text-indigo-700 hover:text-indigo-800"}`}
+          >
             Create an account
           </Link>
         </p>
-        <p className="mt-4 text-center text-xs leading-5 text-slate-500">
+        <p className={`mt-4 text-center text-xs leading-5 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
           RentyCar is independent and not affiliated with rental car companies, airports, automakers,
           or travel providers.
         </p>

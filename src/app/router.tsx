@@ -12,22 +12,16 @@ import { SubmitReportForm } from "../features/dashboard/SubmitReportForm";
 import { AboutPage } from "../features/public/AboutPage";
 import { HomePage } from "../features/public/HomePage";
 import { LegalPage } from "../features/public/LegalPage";
-import { useTheme } from "../features/theme/themeStore";
-
-function HomeRoute() {
-  const { theme } = useTheme();
-  return (
-    <AppShell variant={theme}>
-      <HomePage />
-    </AppShell>
-  );
-}
 
 export const router = createBrowserRouter(
   [
     {
       path: "/",
-      element: <HomeRoute />,
+      element: (
+        <AppShell>
+          <HomePage />
+        </AppShell>
+      ),
     },
     {
       path: "/about",

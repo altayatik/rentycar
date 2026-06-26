@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 export type Theme = "light" | "dark";
 
-const STORAGE_KEY = "rentycar-home-theme";
+const STORAGE_KEY = "rentycar-theme";
 
 interface ThemeContextValue {
   theme: Theme;

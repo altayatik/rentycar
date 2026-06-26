@@ -6,6 +6,7 @@ import { LoadingState } from "../../components/LoadingState";
 import { formatCondition, formatDate, formatMileage } from "../../lib/formatters";
 import { supabase } from "../../lib/supabase";
 import type { Airport, CarMake, CarModel, MyReportRow, RentalCompany, RentalCompanyType } from "../../lib/types";
+import { useTheme } from "../theme/themeStore";
 
 type Tab = "airports" | "companies" | "makes" | "models" | "reports";
 
@@ -35,6 +36,8 @@ const emptyNamed = { name: "", type: "traditional_rental" as RentalCompanyType, 
 const emptyModel = { make_id: "", name: "", is_active: true };
 
 export function AdminPage() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [tab, setTab] = useState<Tab>("airports");
   const [airports, setAirports] = useState<Airport[]>([]);
   const [companies, setCompanies] = useState<RentalCompany[]>([]);
@@ -87,28 +90,52 @@ export function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <section className="glass-panel flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center">
+      <section
+        className={
+          isDark
+            ? "glass-panel flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center"
+            : "panel flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center"
+        }
+      >
         <div>
-          <p className="text-sm font-semibold uppercase tracking-normal text-teal-300">Admin</p>
-          <h1 className="mt-2 font-display text-3xl font-semibold text-white">RentyCar operations</h1>
-          <p className="mt-2 max-w-2xl text-slate-400">
+          <p className={`text-sm font-semibold uppercase tracking-normal ${isDark ? "text-teal-300" : "text-indigo-700"}`}>
+            Admin
+          </p>
+          <h1 className={`mt-2 text-3xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
+            RentyCar operations
+          </h1>
+          <p className={`mt-2 max-w-2xl ${isDark ? "text-slate-400" : "text-slate-600"}`}>
             Manage reference data and moderate submitted rental car reports.
           </p>
         </div>
-        <button className="glass-button-secondary self-start sm:self-auto" type="button" onClick={loadData}>
+        <button
+          className={`${isDark ? "glass-button-secondary" : "button-secondary"} self-start sm:self-auto`}
+          type="button"
+          onClick={loadData}
+        >
           <RefreshCw className="h-4 w-4" aria-hidden="true" />
           Refresh
         </button>
       </section>
 
-      {error ? <ErrorState message={error} tone="dark" /> : null}
+      {error ? <ErrorState message={error} tone={isDark ? "dark" : "light"} /> : null}
 
-      <div className="flex gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-2">
+      <div
+        className={`flex gap-2 overflow-x-auto rounded-2xl border p-2 ${
+          isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white"
+        }`}
+      >
         {tabs.map((item) => (
           <button
             key={item.id}
             className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${
-              tab === item.id ? "bg-teal-400/15 text-teal-300" : "text-slate-400 hover:bg-white/10 hover:text-white"
+              isDark
+                ? tab === item.id
+                  ? "bg-teal-400/15 text-teal-300"
+                  : "text-slate-400 hover:bg-white/10 hover:text-white"
+                : tab === item.id
+                  ? "bg-indigo-50 text-indigo-700"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"
             }`}
             type="button"
             onClick={() => setTab(item.id)}
@@ -119,32 +146,41 @@ export function AdminPage() {
       </div>
 
       {loading ? (
-        <LoadingState label="Loading admin data" tone="dark" />
+        <LoadingState label="Loading admin data" tone={isDark ? "dark" : "light"} />
       ) : (
         <>
-          {tab === "airports" ? <AirportManager airports={airports} onChanged={loadData} /> : null}
+          {tab === "airports" ? <AirportManager airports={airports} onChanged={loadData} isDark={isDark} /> : null}
           {tab === "companies" ? (
             <NamedManager
               title="Rental companies"
               table="rental_companies"
               rows={companies}
               onChanged={loadData}
+              isDark={isDark}
             />
           ) : null}
           {tab === "makes" ? (
-            <NamedManager title="Car makes" table="car_makes" rows={makes} onChanged={loadData} />
+            <NamedManager title="Car makes" table="car_makes" rows={makes} onChanged={loadData} isDark={isDark} />
           ) : null}
           {tab === "models" ? (
-            <ModelManager makes={makes} models={models} onChanged={loadData} />
+            <ModelManager makes={makes} models={models} onChanged={loadData} isDark={isDark} />
           ) : null}
-          {tab === "reports" ? <ReportManager reports={reports} onChanged={loadData} /> : null}
+          {tab === "reports" ? <ReportManager reports={reports} onChanged={loadData} isDark={isDark} /> : null}
         </>
       )}
     </div>
   );
 }
 
-function AirportManager({ airports, onChanged }: { airports: Airport[]; onChanged: () => Promise<void> }) {
+function AirportManager({
+  airports,
+  onChanged,
+  isDark,
+}: {
+  airports: Airport[];
+  onChanged: () => Promise<void>;
+  isDark: boolean;
+}) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyAirport);
   const [error, setError] = useState("");
@@ -204,15 +240,17 @@ function AirportManager({ airports, onChanged }: { airports: Airport[]; onChange
 
   return (
     <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
-      <form className="glass-panel space-y-4 p-5" onSubmit={submit}>
-        <h2 className="font-display text-lg font-semibold text-white">{editingId ? "Edit airport" : "Add airport"}</h2>
-        {error ? <ErrorState message={error} tone="dark" /> : null}
+      <form className={isDark ? "glass-panel space-y-4 p-5" : "panel space-y-4 p-5"} onSubmit={submit}>
+        <h2 className={`text-lg font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
+          {editingId ? "Edit airport" : "Add airport"}
+        </h2>
+        {error ? <ErrorState message={error} tone={isDark ? "dark" : "light"} /> : null}
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="IATA" value={form.iata_code} onChange={(value) => setForm({ ...form, iata_code: value })} />
+          <Field label="IATA" value={form.iata_code} onChange={(value) => setForm({ ...form, iata_code: value })} isDark={isDark} />
           <label className="block space-y-1.5">
-            <span className="glass-label">Country</span>
+            <span className={isDark ? "glass-label" : "label"}>Country</span>
             <select
-              className="glass-input"
+              className={isDark ? "glass-input" : "input"}
               value={form.country}
               onChange={(event) => setForm({ ...form, country: event.target.value as "US" | "CA" })}
             >
@@ -220,42 +258,51 @@ function AirportManager({ airports, onChanged }: { airports: Airport[]; onChange
               <option value="CA">Canada</option>
             </select>
           </label>
-          <Field label="Name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} span />
-          <Field label="City" value={form.city} onChange={(value) => setForm({ ...form, city: value })} />
-          <Field label="State/province code" value={form.state} onChange={(value) => setForm({ ...form, state: value, region_code: value })} />
+          <Field label="Name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} span isDark={isDark} />
+          <Field label="City" value={form.city} onChange={(value) => setForm({ ...form, city: value })} isDark={isDark} />
+          <Field
+            label="State/province code"
+            value={form.state}
+            onChange={(value) => setForm({ ...form, state: value, region_code: value })}
+            isDark={isDark}
+          />
           <Field
             label="Region name"
             value={form.region_name}
             onChange={(value) => setForm({ ...form, region_name: value })}
+            isDark={isDark}
           />
-          <Field label="Latitude" value={form.latitude} onChange={(value) => setForm({ ...form, latitude: value })} />
+          <Field label="Latitude" value={form.latitude} onChange={(value) => setForm({ ...form, latitude: value })} isDark={isDark} />
           <Field
             label="Longitude"
             value={form.longitude}
             onChange={(value) => setForm({ ...form, longitude: value })}
+            isDark={isDark}
           />
         </div>
         <ActiveToggle
           label="Commercial passenger airport"
           checked={form.is_commercial}
           onChange={(value) => setForm({ ...form, is_commercial: value })}
+          isDark={isDark}
         />
-        <ActiveToggle checked={form.is_active} onChange={(value) => setForm({ ...form, is_active: value })} />
+        <ActiveToggle checked={form.is_active} onChange={(value) => setForm({ ...form, is_active: value })} isDark={isDark} />
         <div className="flex gap-2">
-          <button className="glass-button-primary" type="submit">
+          <button className={isDark ? "glass-button-primary" : "button-primary"} type="submit">
             {editingId ? "Save airport" : "Add airport"}
           </button>
           {editingId ? (
-            <button className="glass-button-secondary" type="button" onClick={reset}>
+            <button className={isDark ? "glass-button-secondary" : "button-secondary"} type="button" onClick={reset}>
               Cancel
             </button>
           ) : null}
         </div>
       </form>
 
-      <div className="glass-panel overflow-hidden">
+      <div className={isDark ? "glass-panel overflow-hidden" : "panel overflow-hidden"}>
         <AdminTable
           headers={["IATA", "Name", "City", "Country", "Region", "Commercial", "Active", ""]}
+          isDark={isDark}
           rows={airports.map((airport) => [
             airport.iata_code,
             airport.name,
@@ -264,7 +311,11 @@ function AirportManager({ airports, onChanged }: { airports: Airport[]; onChange
             `${airport.region_code ?? airport.state} - ${airport.region_name ?? airport.state}`,
             airport.is_commercial ? "Yes" : "No",
             airport.is_active ? "Yes" : "No",
-            <button className="glass-button-secondary px-3 py-1.5" type="button" onClick={() => edit(airport)}>
+            <button
+              className={`${isDark ? "glass-button-secondary" : "button-secondary"} px-3 py-1.5`}
+              type="button"
+              onClick={() => edit(airport)}
+            >
               <Edit className="h-4 w-4" aria-hidden="true" />
               Edit
             </button>,
@@ -282,11 +333,13 @@ function NamedManager({
   table,
   rows,
   onChanged,
+  isDark,
 }: {
   title: string;
   table: NamedTable;
   rows: Array<RentalCompany | CarMake>;
   onChanged: () => Promise<void>;
+  isDark: boolean;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyNamed);
@@ -325,15 +378,17 @@ function NamedManager({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-      <form className="glass-panel space-y-4 p-5" onSubmit={submit}>
-        <h2 className="font-display text-lg font-semibold text-white">{editingId ? `Edit ${title}` : `Add ${title}`}</h2>
-        {error ? <ErrorState message={error} tone="dark" /> : null}
-        <Field label="Name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
+      <form className={isDark ? "glass-panel space-y-4 p-5" : "panel space-y-4 p-5"} onSubmit={submit}>
+        <h2 className={`text-lg font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
+          {editingId ? `Edit ${title}` : `Add ${title}`}
+        </h2>
+        {error ? <ErrorState message={error} tone={isDark ? "dark" : "light"} /> : null}
+        <Field label="Name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} isDark={isDark} />
         {table === "rental_companies" ? (
           <label className="block space-y-1.5">
-            <span className="glass-label">Type</span>
+            <span className={isDark ? "glass-label" : "label"}>Type</span>
             <select
-              className="glass-input"
+              className={isDark ? "glass-input" : "input"}
               value={form.type}
               onChange={(event) => setForm({ ...form, type: event.target.value as RentalCompanyType })}
             >
@@ -343,14 +398,14 @@ function NamedManager({
             </select>
           </label>
         ) : null}
-        <ActiveToggle checked={form.is_active} onChange={(value) => setForm({ ...form, is_active: value })} />
+        <ActiveToggle checked={form.is_active} onChange={(value) => setForm({ ...form, is_active: value })} isDark={isDark} />
         <div className="flex gap-2">
-          <button className="glass-button-primary" type="submit">
+          <button className={isDark ? "glass-button-primary" : "button-primary"} type="submit">
             Save
           </button>
           {editingId ? (
             <button
-              className="glass-button-secondary"
+              className={isDark ? "glass-button-secondary" : "button-secondary"}
               type="button"
               onClick={() => {
                 setEditingId(null);
@@ -362,15 +417,16 @@ function NamedManager({
           ) : null}
         </div>
       </form>
-      <div className="glass-panel overflow-hidden">
+      <div className={isDark ? "glass-panel overflow-hidden" : "panel overflow-hidden"}>
         <AdminTable
           headers={table === "rental_companies" ? ["Name", "Type", "Active", ""] : ["Name", "Active", ""]}
+          isDark={isDark}
           rows={rows.map((row) => [
             row.name,
             ...(table === "rental_companies" ? [("type" in row ? row.type : "traditional_rental")] : []),
             row.is_active ? "Yes" : "No",
             <button
-              className="glass-button-secondary px-3 py-1.5"
+              className={`${isDark ? "glass-button-secondary" : "button-secondary"} px-3 py-1.5`}
               type="button"
               onClick={() => {
                 setEditingId(row.id);
@@ -395,10 +451,12 @@ function ModelManager({
   makes,
   models,
   onChanged,
+  isDark,
 }: {
   makes: CarMake[];
   models: CarModel[];
   onChanged: () => Promise<void>;
+  isDark: boolean;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyModel);
@@ -427,12 +485,18 @@ function ModelManager({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-      <form className="glass-panel space-y-4 p-5" onSubmit={submit}>
-        <h2 className="font-display text-lg font-semibold text-white">{editingId ? "Edit model" : "Add model"}</h2>
-        {error ? <ErrorState message={error} tone="dark" /> : null}
+      <form className={isDark ? "glass-panel space-y-4 p-5" : "panel space-y-4 p-5"} onSubmit={submit}>
+        <h2 className={`text-lg font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
+          {editingId ? "Edit model" : "Add model"}
+        </h2>
+        {error ? <ErrorState message={error} tone={isDark ? "dark" : "light"} /> : null}
         <label className="block space-y-1.5">
-          <span className="glass-label">Make</span>
-          <select className="glass-input" value={form.make_id} onChange={(event) => setForm({ ...form, make_id: event.target.value })}>
+          <span className={isDark ? "glass-label" : "label"}>Make</span>
+          <select
+            className={isDark ? "glass-input" : "input"}
+            value={form.make_id}
+            onChange={(event) => setForm({ ...form, make_id: event.target.value })}
+          >
             <option value="">Choose</option>
             {makes.map((make) => (
               <option key={make.id} value={make.id}>
@@ -441,15 +505,15 @@ function ModelManager({
             ))}
           </select>
         </label>
-        <Field label="Model" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
-        <ActiveToggle checked={form.is_active} onChange={(value) => setForm({ ...form, is_active: value })} />
+        <Field label="Model" value={form.name} onChange={(value) => setForm({ ...form, name: value })} isDark={isDark} />
+        <ActiveToggle checked={form.is_active} onChange={(value) => setForm({ ...form, is_active: value })} isDark={isDark} />
         <div className="flex gap-2">
-          <button className="glass-button-primary" type="submit">
+          <button className={isDark ? "glass-button-primary" : "button-primary"} type="submit">
             Save
           </button>
           {editingId ? (
             <button
-              className="glass-button-secondary"
+              className={isDark ? "glass-button-secondary" : "button-secondary"}
               type="button"
               onClick={() => {
                 setEditingId(null);
@@ -461,15 +525,16 @@ function ModelManager({
           ) : null}
         </div>
       </form>
-      <div className="glass-panel overflow-hidden">
+      <div className={isDark ? "glass-panel overflow-hidden" : "panel overflow-hidden"}>
         <AdminTable
           headers={["Make", "Model", "Active", ""]}
+          isDark={isDark}
           rows={models.map((model) => [
             makeById[model.make_id] ?? "Unknown",
             model.name,
             model.is_active ? "Yes" : "No",
             <button
-              className="glass-button-secondary px-3 py-1.5"
+              className={`${isDark ? "glass-button-secondary" : "button-secondary"} px-3 py-1.5`}
               type="button"
               onClick={() => {
                 setEditingId(model.id);
@@ -486,7 +551,15 @@ function ModelManager({
   );
 }
 
-function ReportManager({ reports, onChanged }: { reports: MyReportRow[]; onChanged: () => Promise<void> }) {
+function ReportManager({
+  reports,
+  onChanged,
+  isDark,
+}: {
+  reports: MyReportRow[];
+  onChanged: () => Promise<void>;
+  isDark: boolean;
+}) {
   const [error, setError] = useState("");
 
   const softDelete = async (reportId: string) => {
@@ -504,15 +577,16 @@ function ReportManager({ reports, onChanged }: { reports: MyReportRow[]; onChang
   };
 
   if (!reports.length) {
-    return <EmptyState title="No reports" message="Submitted reports will appear here." tone="dark" />;
+    return <EmptyState title="No reports" message="Submitted reports will appear here." tone={isDark ? "dark" : "light"} />;
   }
 
   return (
     <div className="space-y-4">
-      {error ? <ErrorState message={error} tone="dark" /> : null}
-      <div className="glass-panel overflow-hidden">
+      {error ? <ErrorState message={error} tone={isDark ? "dark" : "light"} /> : null}
+      <div className={isDark ? "glass-panel overflow-hidden" : "panel overflow-hidden"}>
         <AdminTable
           headers={["Airport", "Company", "Vehicle", "Mileage", "Condition", "Observed", "Deleted", ""]}
+          isDark={isDark}
           rows={reports.map((report) => [
             report.airports?.iata_code ?? "Unknown",
             report.rental_companies?.name ?? "Unknown",
@@ -522,9 +596,13 @@ function ReportManager({ reports, onChanged }: { reports: MyReportRow[]; onChang
             formatDate(report.observed_at),
             report.deleted_at ? formatDate(report.deleted_at) : "No",
             report.deleted_at ? (
-              <span className="text-sm text-slate-500">Deleted</span>
+              <span className={`text-sm ${isDark ? "text-slate-500" : "text-slate-400"}`}>Deleted</span>
             ) : (
-              <button className="glass-button-secondary px-3 py-1.5" type="button" onClick={() => softDelete(report.id)}>
+              <button
+                className={`${isDark ? "glass-button-secondary" : "button-secondary"} px-3 py-1.5`}
+                type="button"
+                onClick={() => softDelete(report.id)}
+              >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
                 Soft-delete
               </button>
@@ -541,16 +619,22 @@ function Field({
   value,
   onChange,
   span = false,
+  isDark,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   span?: boolean;
+  isDark: boolean;
 }) {
   return (
     <label className={`block space-y-1.5 ${span ? "sm:col-span-2" : ""}`}>
-      <span className="glass-label">{label}</span>
-      <input className="glass-input" value={value} onChange={(event) => onChange(event.target.value)} />
+      <span className={isDark ? "glass-label" : "label"}>{label}</span>
+      <input
+        className={isDark ? "glass-input" : "input"}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </label>
   );
 }
@@ -559,15 +643,21 @@ function ActiveToggle({
   checked,
   onChange,
   label = "Active",
+  isDark,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label?: string;
+  isDark: boolean;
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm font-medium text-slate-300">
+    <label className={`flex items-center gap-2 text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-700"}`}>
       <input
-        className="h-4 w-4 rounded border-white/20 bg-white/5 text-teal-400 focus:ring-teal-400"
+        className={
+          isDark
+            ? "h-4 w-4 rounded border-white/20 bg-white/5 text-teal-400 focus:ring-teal-400"
+            : "h-4 w-4 rounded border-slate-300 bg-white text-indigo-700 focus:ring-indigo-200"
+        }
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
@@ -577,11 +667,25 @@ function ActiveToggle({
   );
 }
 
-function AdminTable({ headers, rows }: { headers: string[]; rows: Array<Array<React.ReactNode>> }) {
+function AdminTable({
+  headers,
+  rows,
+  isDark,
+}: {
+  headers: string[];
+  rows: Array<Array<React.ReactNode>>;
+  isDark: boolean;
+}) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-white/10 text-sm">
-        <thead className="bg-white/[0.03] text-left text-xs font-semibold uppercase tracking-normal text-slate-400">
+      <table className={`min-w-full divide-y text-sm ${isDark ? "divide-white/10" : "divide-slate-200"}`}>
+        <thead
+          className={
+            isDark
+              ? "bg-white/[0.03] text-left text-xs font-semibold uppercase tracking-normal text-slate-400"
+              : "bg-slate-50 text-left text-xs font-semibold uppercase tracking-normal text-slate-500"
+          }
+        >
           <tr>
             {headers.map((header) => (
               <th key={header} className="px-4 py-3">
@@ -590,11 +694,17 @@ function AdminTable({ headers, rows }: { headers: string[]; rows: Array<Array<Re
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-white/5">
+        <tbody className={`divide-y ${isDark ? "divide-white/5" : "divide-slate-100"}`}>
           {rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="transition hover:bg-teal-400/5">
+            <tr
+              key={rowIndex}
+              className={`transition ${isDark ? "hover:bg-teal-400/5" : "hover:bg-indigo-50/60"}`}
+            >
               {row.map((cell, cellIndex) => (
-                <td key={cellIndex} className="whitespace-nowrap px-4 py-3 text-slate-300">
+                <td
+                  key={cellIndex}
+                  className={`whitespace-nowrap px-4 py-3 ${isDark ? "text-slate-300" : "text-slate-700"}`}
+                >
                   {cell}
                 </td>
               ))}

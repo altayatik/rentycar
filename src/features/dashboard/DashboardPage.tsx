@@ -6,10 +6,13 @@ import { ReportTable } from "../../components/ReportTable";
 import { supabase } from "../../lib/supabase";
 import type { MyReportRow } from "../../lib/types";
 import { useAuth } from "../auth/authStore";
+import { useTheme } from "../theme/themeStore";
 import { SubmitReportForm } from "./SubmitReportForm";
 
 export function DashboardPage() {
   const { profile, user } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [reports, setReports] = useState<MyReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -46,12 +49,14 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="glass-panel p-6">
-        <p className="text-sm font-semibold uppercase tracking-normal text-teal-300">Dashboard</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold text-white">
+      <section className={isDark ? "glass-panel p-6" : "panel p-6"}>
+        <p className={`text-sm font-semibold uppercase tracking-normal ${isDark ? "text-teal-300" : "text-indigo-700"}`}>
+          Dashboard
+        </p>
+        <h1 className={`mt-2 text-3xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
           Welcome{profile?.username ? `, ${profile.username}` : ""}
         </h1>
-        <p className="mt-2 max-w-2xl text-slate-400">
+        <p className={`mt-2 max-w-2xl ${isDark ? "text-slate-400" : "text-slate-600"}`}>
           Submit verified lot observations and review your recent rental car reports.
         </p>
       </section>
@@ -65,16 +70,29 @@ export function DashboardPage() {
 
         <section className="space-y-4">
           <div>
-            <h2 className="font-display text-xl font-semibold text-white">My recent reports</h2>
-            <p className="mt-1 text-sm text-slate-400">Your latest non-deleted submissions.</p>
+            <h2 className={`text-xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
+              My recent reports
+            </h2>
+            <p className={`mt-1 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+              Your latest non-deleted submissions.
+            </p>
           </div>
-          {error ? <ErrorState message={error} tone="dark" /> : null}
+          {error ? <ErrorState message={error} tone={isDark ? "dark" : "light"} /> : null}
           {loading ? (
-            <LoadingState label="Loading your reports" tone="dark" />
+            <LoadingState label="Loading your reports" tone={isDark ? "dark" : "light"} />
           ) : reports.length ? (
-            <ReportTable reports={reports} mode="private" onEdit={(report) => setEditingReport(report)} />
+            <ReportTable
+              reports={reports}
+              mode="private"
+              onEdit={(report) => setEditingReport(report)}
+              theme={theme}
+            />
           ) : (
-            <EmptyState title="No reports submitted" message="Your reports will show up here." tone="dark" />
+            <EmptyState
+              title="No reports submitted"
+              message="Your reports will show up here."
+              tone={isDark ? "dark" : "light"}
+            />
           )}
         </section>
       </div>

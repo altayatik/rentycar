@@ -7,6 +7,7 @@ import { useAuth } from "../auth/authStore";
 import { isSupabaseConfigured, supabase, supabaseConfigError } from "../../lib/supabase";
 import type { Airport, CarMake, CarModel, MyReportRow, RentalCompany } from "../../lib/types";
 import { reportSchema, type ReportFormValues } from "../../lib/validators";
+import { useTheme } from "../theme/themeStore";
 
 type ReportErrors = Partial<Record<keyof ReportFormValues, string>>;
 
@@ -135,6 +136,8 @@ const initialValues: FormValues = {
 
 export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: SubmitReportFormProps) {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [values, setValues] = useState<FormValues>(initialValues);
   const [airports, setAirports] = useState<Airport[]>([]);
   const [companies, setCompanies] = useState<RentalCompany[]>([]);
@@ -305,23 +308,23 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
       <ErrorState
         title="Supabase is not configured"
         message={supabaseConfigError}
-        tone="dark"
+        tone={isDark ? "dark" : "light"}
       />
     );
   }
 
   if (loading) {
-    return <LoadingState label="Loading report form" tone="dark" />;
+    return <LoadingState label="Loading report form" tone={isDark ? "dark" : "light"} />;
   }
 
   return (
-    <form className="glass-panel space-y-6 p-5 sm:p-6" onSubmit={handleSubmit}>
-      <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-4">
+    <form className={isDark ? "glass-panel space-y-6 p-5 sm:p-6" : "panel space-y-6 p-5 sm:p-6"} onSubmit={handleSubmit}>
+      <div className={`flex items-start justify-between gap-3 border-b pb-4 ${isDark ? "border-white/10" : "border-slate-200"}`}>
         <div>
-          <h2 className="font-display text-xl font-semibold text-white">
+          <h2 className={`text-xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
             {editingReport ? "Edit rental car report" : "Submit rental car report"}
           </h2>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className={`mt-1 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
             {editingReport
               ? "Update the details of this report."
               : "Add an observed vehicle from an airport rental lot."}
@@ -330,7 +333,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
         {editingReport ? (
           <button
             type="button"
-            className="glass-button-secondary"
+            className={isDark ? "glass-button-secondary" : "button-secondary"}
             onClick={() => onCancelEdit?.()}
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -339,9 +342,13 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
         ) : null}
       </div>
 
-      {formError ? <ErrorState title="Could not submit report" message={formError} tone="dark" /> : null}
+      {formError ? <ErrorState title="Could not submit report" message={formError} tone={isDark ? "dark" : "light"} /> : null}
       {success ? (
-        <div className="rounded-xl border border-teal-400/20 bg-teal-400/10 p-4 text-sm text-teal-300">
+        <div
+          className={`rounded-xl border p-4 text-sm ${
+            isDark ? "border-teal-400/20 bg-teal-400/10 text-teal-300" : "border-indigo-100 bg-indigo-50 text-indigo-700"
+          }`}
+        >
           {success}
         </div>
       ) : null}
@@ -354,6 +361,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           onChange={(value) => update("airport_id", value)}
           groups={groupAirports(airports)}
           required
+          isDark={isDark}
         />
         <SelectField
           label="Rental company"
@@ -362,6 +370,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           onChange={(value) => update("rental_company_id", value)}
           options={companies.map((company) => ({ value: company.id, label: company.name }))}
           required
+          isDark={isDark}
         />
         <SelectField
           label="Car make"
@@ -370,6 +379,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           onChange={(value) => update("make_id", value)}
           options={makes.map((make) => ({ value: make.id, label: make.name }))}
           required
+          isDark={isDark}
         />
         <SelectField
           label="Car model"
@@ -378,6 +388,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           onChange={(value) => update("model_id", value)}
           options={filteredModels.map((model) => ({ value: model.id, label: model.name }))}
           required
+          isDark={isDark}
         />
         <InputField
           label="Year (optional)"
@@ -385,6 +396,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           value={values.year}
           error={errors.year}
           onChange={(value) => update("year", value)}
+          isDark={isDark}
         />
         <SelectField
           label="Trim (optional)"
@@ -392,6 +404,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           error={errors.trim}
           onChange={(value) => update("trim", value)}
           options={trimOptions}
+          isDark={isDark}
         />
         <InputField
           label="Mileage (optional)"
@@ -399,6 +412,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           value={values.mileage}
           error={errors.mileage}
           onChange={(value) => update("mileage", value)}
+          isDark={isDark}
         />
         <InputField
           label="Date observed (optional)"
@@ -406,6 +420,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           value={values.observed_at}
           error={errors.observed_at}
           onChange={(value) => update("observed_at", value)}
+          isDark={isDark}
         />
         <SelectField
           label="Exterior condition"
@@ -414,6 +429,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           onChange={(value) => update("exterior_condition", value)}
           options={conditions}
           required
+          isDark={isDark}
         />
         <SelectField
           label="Interior condition"
@@ -422,6 +438,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           onChange={(value) => update("interior_condition", value)}
           options={conditions}
           required
+          isDark={isDark}
         />
         <SelectField
           label="Tire condition (optional)"
@@ -429,6 +446,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           error={errors.tire_condition}
           onChange={(value) => update("tire_condition", value)}
           options={tireConditionOptions}
+          isDark={isDark}
         />
         <SelectField
           label="Drivetrain (optional)"
@@ -436,6 +454,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           error={errors.drivetrain}
           onChange={(value) => update("drivetrain", value)}
           options={drivetrainOptions}
+          isDark={isDark}
         />
         <SelectField
           label="Fuel type (optional)"
@@ -443,6 +462,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           error={errors.fuel_type}
           onChange={(value) => update("fuel_type", value)}
           options={fuelTypeOptions}
+          isDark={isDark}
         />
         {showOctane ? (
           <SelectField
@@ -451,6 +471,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
             error={errors.fuel_octane}
             onChange={(value) => update("fuel_octane", value)}
             options={fuelOctaneOptions}
+            isDark={isDark}
           />
         ) : null}
         {showChargingSpeed ? (
@@ -460,12 +481,13 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
             error={errors.ev_charging_speed}
             onChange={(value) => update("ev_charging_speed", value)}
             options={evChargingSpeedOptions}
+            isDark={isDark}
           />
         ) : null}
       </div>
 
       <label className="block space-y-1.5">
-        <span className="glass-label">
+        <span className={isDark ? "glass-label" : "label"}>
           Fuel / battery level{values.fuel_level_percent ? `: ${values.fuel_level_percent}%` : " (optional)"}
         </span>
         <input
@@ -486,13 +508,20 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
       </label>
 
       <fieldset className="space-y-2">
-        <legend className="glass-label">Driver assistance features</legend>
+        <legend className={isDark ? "glass-label" : "label"}>Driver assistance features</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {adasOptions.map((option) => (
-            <label key={option.key} className="flex items-center gap-2 text-sm text-slate-300">
+            <label
+              key={option.key}
+              className={`flex items-center gap-2 text-sm ${isDark ? "text-slate-300" : "text-slate-700"}`}
+            >
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded border-white/20 bg-white/5 text-teal-400 focus:ring-teal-400"
+                className={
+                  isDark
+                    ? "h-4 w-4 rounded border-white/20 bg-white/5 text-teal-400 focus:ring-teal-400"
+                    : "h-4 w-4 rounded border-slate-300 bg-white text-indigo-700 focus:ring-indigo-200"
+                }
                 checked={values[option.key]}
                 onChange={() => toggleAdas(option.key)}
               />
@@ -508,6 +537,7 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           value={values.license_plate}
           error={errors.license_plate}
           onChange={(value) => update("license_plate", value)}
+          isDark={isDark}
         />
         <GroupedSelectField
           label="License plate state/province (optional)"
@@ -515,12 +545,13 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           error={errors.license_plate_state}
           onChange={(value) => update("license_plate_state", value)}
           groups={stateGroups}
+          isDark={isDark}
         />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <button
-          className="glass-button-primary w-full sm:w-auto"
+          className={`${isDark ? "glass-button-primary" : "button-primary"} w-full sm:w-auto`}
           type="submit"
           disabled={submitting}
         >
@@ -528,7 +559,11 @@ export function SubmitReportForm({ onSubmitted, editingReport, onCancelEdit }: S
           {submitting ? "Saving" : editingReport ? "Update report" : "Submit report"}
         </button>
         {editingReport ? (
-          <button type="button" className="glass-button-secondary" onClick={() => onCancelEdit?.()}>
+          <button
+            type="button"
+            className={isDark ? "glass-button-secondary" : "button-secondary"}
+            onClick={() => onCancelEdit?.()}
+          >
             Cancel
           </button>
         ) : null}
@@ -549,6 +584,7 @@ interface SelectFieldProps {
   options: Option[];
   onChange: (value: string) => void;
   required?: boolean;
+  isDark: boolean;
 }
 
 function RequiredMark() {
@@ -560,14 +596,18 @@ function RequiredMark() {
   );
 }
 
-function SelectField({ label, value, error, options, onChange, required }: SelectFieldProps) {
+function SelectField({ label, value, error, options, onChange, required, isDark }: SelectFieldProps) {
   return (
     <label className="block space-y-1.5">
-      <span className="glass-label">
+      <span className={isDark ? "glass-label" : "label"}>
         {label}
         {required ? <RequiredMark /> : null}
       </span>
-      <select className="glass-input" value={value} onChange={(event) => onChange(event.target.value)}>
+      <select
+        className={isDark ? "glass-input" : "input"}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
         <option value="">Choose</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -587,16 +627,21 @@ interface GroupedSelectFieldProps {
   groups: Array<{ label: string; options: Option[] }>;
   onChange: (value: string) => void;
   required?: boolean;
+  isDark: boolean;
 }
 
-function GroupedSelectField({ label, value, error, groups, onChange, required }: GroupedSelectFieldProps) {
+function GroupedSelectField({ label, value, error, groups, onChange, required, isDark }: GroupedSelectFieldProps) {
   return (
     <label className="block space-y-1.5">
-      <span className="glass-label">
+      <span className={isDark ? "glass-label" : "label"}>
         {label}
         {required ? <RequiredMark /> : null}
       </span>
-      <select className="glass-input" value={value} onChange={(event) => onChange(event.target.value)}>
+      <select
+        className={isDark ? "glass-input" : "input"}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
         <option value="">Choose</option>
         {groups.map((group) => (
           <optgroup key={group.label} label={group.label}>
@@ -640,13 +685,19 @@ interface InputFieldProps {
   error?: string;
   type?: string;
   onChange: (value: string) => void;
+  isDark: boolean;
 }
 
-function InputField({ label, value, error, type = "text", onChange }: InputFieldProps) {
+function InputField({ label, value, error, type = "text", onChange, isDark }: InputFieldProps) {
   return (
     <label className="block space-y-1.5">
-      <span className="glass-label">{label}</span>
-      <input className="glass-input" type={type} value={value} onChange={(event) => onChange(event.target.value)} />
+      <span className={isDark ? "glass-label" : "label"}>{label}</span>
+      <input
+        className={isDark ? "glass-input" : "input"}
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
       {error ? <span className="text-xs text-red-400">{error}</span> : null}
     </label>
   );
