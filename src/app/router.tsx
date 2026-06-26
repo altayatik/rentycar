@@ -4,7 +4,10 @@ import { AppShell } from "../components/AppShell";
 import { ProtectedRoute } from "../components/ProtectedRoute";
 import { AdminPage } from "../features/admin/AdminPage";
 import { LoginPage } from "../features/auth/LoginPage";
+import { SignupPage } from "../features/auth/SignupPage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
+import { FriendsPage } from "../features/dashboard/FriendsPage";
+import { StampsPage } from "../features/dashboard/StampsPage";
 import { SubmitReportForm } from "../features/dashboard/SubmitReportForm";
 import { AboutPage } from "../features/public/AboutPage";
 import { HomePage } from "../features/public/HomePage";
@@ -41,11 +44,35 @@ export const router = createBrowserRouter(
       element: <LoginPage />,
     },
     {
+      path: "/signup",
+      element: <SignupPage />,
+    },
+    {
       path: "/dashboard",
       element: (
         <ProtectedRoute>
           <AppShell>
             <DashboardPage />
+          </AppShell>
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/friends",
+      element: (
+        <ProtectedRoute>
+          <AppShell>
+            <FriendsPage />
+          </AppShell>
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/stamps",
+      element: (
+        <ProtectedRoute>
+          <AppShell>
+            <StampsPage />
           </AppShell>
         </ProtectedRoute>
       ),

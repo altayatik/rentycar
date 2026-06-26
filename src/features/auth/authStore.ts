@@ -18,6 +18,7 @@ interface AuthContextValue {
   session: Session | null;
   loading: boolean;
   signIn: (username: string, password: string) => Promise<void>;
+  signUp: (params: { username: string; nickname: string; password: string; inviteCode: string }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -38,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, username, role, created_at")
+      .select("id, username, nickname, role, created_at")
       .eq("id", userId)
       .maybeSingle();
 
@@ -113,14 +114,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const signUp = useCallback(
+    async ({
+      username,
+      nickname,
+      password,
+      inviteCode,
+    }: {
+      username: string;
+      nickname: string;
+      password: string;
+      inviteCode: string;
+    }) => {
+      if (!supabase) {
+        throw new Error(supabaseConfigError || "Supabase is not configured.");
+      }
+
+      const normalizedUsername = username.trim().toLowerCase();
+      const normalizedNickname = nickname.trim();
+      const normalizedInviteCode = inviteCode.trim().toUpperCase();
+
+      const { data: preflight, error: preflightError } = await supabase.rpc("validate_invite_signup", {
+        target_username: normalizedUsername,
+        target_invite_code: normalizedInviteCode,
+      });
+
+      if (preflightError) {
+        throw preflightError;
+      }
+
+      const result = Array.isArray(preflight) ? preflight[0] : preflight;
+      if (result && !result.ok) {
+        throw new Error(result.message as string);
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: usernameToPseudoEmail(normalizedUsername),
+        password,
+        options: {
+          data: {
+            username: normalizedUsername,
+            nickname: normalizedNickname,
+            invite_code: normalizedInviteCode,
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.session) {
+        throw new Error(
+          "Account created, but no session was returned. Confirm email may be enabled in Supabase Auth — turn it off and try signing in.",
+        );
+      }
+    },
+    [],
+  );
+
   const signOut = useCallback(async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
   }, []);
 
   const value = useMemo(
-    () => ({ user, profile, session, loading, signIn, signOut, refreshProfile }),
-    [user, profile, session, loading, signIn, signOut, refreshProfile],
+    () => ({ user, profile, session, loading, signIn, signUp, signOut, refreshProfile }),
+    [user, profile, session, loading, signIn, signUp, signOut, refreshProfile],
   );
 
   return createElement(AuthContext.Provider, { value }, children);

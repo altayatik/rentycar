@@ -1,24 +1,23 @@
-import { ArrowLeft, CarFront, LogIn } from "lucide-react";
+import { ArrowLeft, CarFront, UserPlus } from "lucide-react";
 import { FormEvent, useState } from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { ErrorState } from "../../components/ErrorState";
 import { useAuth } from "./authStore";
 import { isSupabaseConfigured, supabaseConfigError } from "../../lib/supabase";
-import { loginSchema } from "../../lib/validators";
+import { signupSchema } from "../../lib/validators";
 
-type LoginErrors = Partial<Record<"username" | "password", string>>;
+type SignupErrors = Partial<Record<"username" | "nickname" | "password" | "inviteCode", string>>;
 
-export function LoginPage() {
-  const { user, signIn } = useAuth();
+export function SignupPage() {
+  const { user, signUp } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [username, setUsername] = useState("");
+  const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<LoginErrors>({});
+  const [inviteCode, setInviteCode] = useState("");
+  const [errors, setErrors] = useState<SignupErrors>({});
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/dashboard";
 
   if (user) {
     return <Navigate to="/dashboard" replace />;
@@ -29,22 +28,29 @@ export function LoginPage() {
     setFormError("");
     setErrors({});
 
-    const result = loginSchema.safeParse({ username, password });
+    const result = signupSchema.safeParse({ username, nickname, password, inviteCode });
     if (!result.success) {
       const fieldErrors = result.error.flatten().fieldErrors;
       setErrors({
         username: fieldErrors.username?.[0],
+        nickname: fieldErrors.nickname?.[0],
         password: fieldErrors.password?.[0],
+        inviteCode: fieldErrors.inviteCode?.[0],
       });
       return;
     }
 
     setSubmitting(true);
     try {
-      await signIn(result.data.username, result.data.password);
-      navigate(from, { replace: true });
+      await signUp({
+        username: result.data.username,
+        nickname: result.data.nickname,
+        password: result.data.password,
+        inviteCode: result.data.inviteCode,
+      });
+      navigate("/dashboard", { replace: true });
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Unable to sign in.");
+      setFormError(error instanceof Error ? error.message : "Unable to create account.");
     } finally {
       setSubmitting(false);
     }
@@ -70,18 +76,22 @@ export function LoginPage() {
 
         <form className="panel space-y-6 p-6 sm:p-8" onSubmit={handleSubmit}>
           <div className="text-center">
-            <h1 className="text-2xl font-semibold text-slate-950">Welcome back</h1>
-            <p className="mt-2 text-sm text-slate-500">Sign in with your assigned RentyCar username.</p>
+            <h1 className="text-2xl font-semibold text-slate-950">Create account</h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Use an invite code. RentyCar only needs a username, nickname, and password.
+            </p>
           </div>
 
           {!isSupabaseConfigured ? (
-            <ErrorState
-              title="Supabase is not configured"
-              message={supabaseConfigError}
-            />
+            <ErrorState title="Supabase is not configured" message={supabaseConfigError} />
           ) : null}
 
-          {formError ? <ErrorState title="Login failed" message={formError} /> : null}
+          {formError ? <ErrorState title="Signup failed" message={formError} /> : null}
+
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">
+            RentyCar does not collect email addresses or recovery details. If a password is forgotten, there is
+            currently no way to reset it.
+          </div>
 
           <label className="block space-y-1.5">
             <span className="label">Username</span>
@@ -90,8 +100,20 @@ export function LoginPage() {
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               autoComplete="username"
+              autoCorrect="off"
             />
             {errors.username ? <span className="text-xs text-red-700">{errors.username}</span> : null}
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="label">Nickname</span>
+            <input
+              className="input"
+              value={nickname}
+              onChange={(event) => setNickname(event.target.value)}
+              autoCorrect="off"
+            />
+            {errors.nickname ? <span className="text-xs text-red-700">{errors.nickname}</span> : null}
           </label>
 
           <label className="block space-y-1.5">
@@ -101,9 +123,21 @@ export function LoginPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
+              autoComplete="new-password"
             />
             {errors.password ? <span className="text-xs text-red-700">{errors.password}</span> : null}
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="label">Invite code</span>
+            <input
+              className="input"
+              value={inviteCode}
+              onChange={(event) => setInviteCode(event.target.value)}
+              autoCorrect="off"
+              autoCapitalize="characters"
+            />
+            {errors.inviteCode ? <span className="text-xs text-red-700">{errors.inviteCode}</span> : null}
           </label>
 
           <button
@@ -111,19 +145,16 @@ export function LoginPage() {
             type="submit"
             disabled={submitting}
           >
-            <LogIn className="h-4 w-4" aria-hidden="true" />
-            {submitting ? "Signing in" : "Sign in"}
+            <UserPlus className="h-4 w-4" aria-hidden="true" />
+            {submitting ? "Creating account" : "Create account"}
           </button>
         </form>
+
         <p className="mt-6 text-center text-sm text-slate-500">
-          Have an invite code?{" "}
-          <Link to="/signup" className="font-semibold text-indigo-700 hover:text-indigo-800">
-            Create an account
+          Already have an account?{" "}
+          <Link to="/login" className="font-semibold text-indigo-700 hover:text-indigo-800">
+            Sign in
           </Link>
-        </p>
-        <p className="mt-4 text-center text-xs leading-5 text-slate-500">
-          RentyCar is independent and not affiliated with rental car companies, airports, automakers,
-          or travel providers.
         </p>
       </div>
     </div>

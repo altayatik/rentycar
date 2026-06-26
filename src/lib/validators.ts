@@ -73,5 +73,17 @@ export const reportSchema = z.object({
   observed_at: optionalText,
 });
 
+export const signupSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9_-]{3,32}$/, "Username is 3-32 characters: letters, numbers, underscores, or dashes"),
+  nickname: z.string().trim().min(2, "Nickname is 2-40 characters").max(40, "Nickname is 2-40 characters"),
+  password: z.string().min(8, "Password is at least 8 characters"),
+  inviteCode: z.string().trim().min(1, "Invite code is required"),
+});
+
 export type LoginFormValues = z.infer<typeof loginSchema>;
 export type ReportFormValues = z.infer<typeof reportSchema>;
+export type SignupFormValues = z.infer<typeof signupSchema>;

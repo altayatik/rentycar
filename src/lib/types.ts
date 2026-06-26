@@ -12,8 +12,27 @@ export type Drivetrain = "fwd" | "rwd" | "awd" | "4wd";
 export interface Profile {
   id: string;
   username: string;
+  nickname?: string | null;
   role: Role;
   created_at: string;
+}
+
+export type FriendshipStatus = "pending" | "accepted";
+export type FriendshipDirection = "incoming" | "outgoing" | "accepted";
+
+export interface FriendStampSummary {
+  friendship_id: string;
+  profile_id: string;
+  username: string;
+  nickname: string | null;
+  status: FriendshipStatus;
+  direction: FriendshipDirection;
+  stamp_count: number;
+  top_make: string | null;
+  top_company: string | null;
+  top_airport: string | null;
+  latest_observed_at: string | null;
+  friendship_created_at: string | null;
 }
 
 export interface Airport {

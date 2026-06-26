@@ -1,4 +1,4 @@
-import { CarFront, Info, LayoutDashboard, LogIn, Map, Scale, Shield } from "lucide-react";
+import { BookOpen, CarFront, Info, LayoutDashboard, LogIn, Map, Scale, Shield, UserPlus, Users } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../features/auth/authStore";
 
@@ -38,6 +38,14 @@ export function Navbar() {
                 <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
                 Dashboard
               </NavLink>
+              <NavLink to="/stamps" className={navLinkClass}>
+                <BookOpen className="h-4 w-4" aria-hidden="true" />
+                Stamps
+              </NavLink>
+              <NavLink to="/friends" className={navLinkClass}>
+                <Users className="h-4 w-4" aria-hidden="true" />
+                Friends
+              </NavLink>
               {profile?.role === "admin" ? (
                 <NavLink to="/admin" className={navLinkClass}>
                   <Shield className="h-4 w-4" aria-hidden="true" />
@@ -49,10 +57,16 @@ export function Navbar() {
               </button>
             </>
           ) : (
-            <NavLink to="/login" className={navLinkClass}>
-              <LogIn className="h-4 w-4" aria-hidden="true" />
-              Login
-            </NavLink>
+            <>
+              <NavLink to="/login" className={navLinkClass}>
+                <LogIn className="h-4 w-4" aria-hidden="true" />
+                Login
+              </NavLink>
+              <NavLink to="/signup" className={navLinkClass}>
+                <UserPlus className="h-4 w-4" aria-hidden="true" />
+                Sign up
+              </NavLink>
+            </>
           )}
         </nav>
       </div>

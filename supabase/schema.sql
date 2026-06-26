@@ -7,6 +7,8 @@ create table if not exists public.profiles (
   created_at timestamptz default now()
 );
 
+alter table public.profiles add column if not exists nickname text;
+
 create table if not exists public.airports (
   id uuid primary key default gen_random_uuid(),
   iata_code text unique not null,
@@ -469,3 +471,360 @@ grant insert, update on public.airports to authenticated;
 grant insert, update on public.rental_companies to authenticated;
 grant insert, update on public.car_makes to authenticated;
 grant insert, update on public.car_models to authenticated;
+
+-- =====================================================================
+-- Friends + stamps (mirrors RentyCar/Supabase/friends_and_stamps.sql
+-- and SupabaseSQL/run_this_friend_since_label_update.sql from the app)
+-- =====================================================================
+
+create table if not exists public.friendships (
+  id uuid primary key default gen_random_uuid(),
+  requester_id uuid not null references public.profiles(id) on delete cascade,
+  addressee_id uuid not null references public.profiles(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending', 'accepted')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (requester_id <> addressee_id),
+  unique (requester_id, addressee_id)
+);
+
+alter table public.friendships enable row level security;
+
+drop policy if exists "Friendships are visible to participants" on public.friendships;
+create policy "Friendships are visible to participants"
+on public.friendships
+for select
+to authenticated
+using (requester_id = auth.uid() or addressee_id = auth.uid());
+
+drop policy if exists "Users can create their own friend requests" on public.friendships;
+create policy "Users can create their own friend requests"
+on public.friendships
+for insert
+to authenticated
+with check (requester_id = auth.uid() and status = 'pending');
+
+drop policy if exists "Participants can update their friendships" on public.friendships;
+create policy "Participants can update their friendships"
+on public.friendships
+for update
+to authenticated
+using (requester_id = auth.uid() or addressee_id = auth.uid())
+with check (requester_id = auth.uid() or addressee_id = auth.uid());
+
+drop policy if exists "Participants can remove friendships" on public.friendships;
+create policy "Participants can remove friendships"
+on public.friendships
+for delete
+to authenticated
+using (requester_id = auth.uid() or addressee_id = auth.uid());
+
+drop function if exists public.send_friend_request(text);
+
+create or replace function public.send_friend_request(target_username text)
+returns table (friendship_id uuid)
+language sql
+security definer
+set search_path = public
+as $$
+  with my_claims as (
+    select
+      auth.uid() as user_id,
+      lower(trim(coalesce(auth.jwt() -> 'user_metadata' ->> 'username', ''))) as username_claim,
+      trim(coalesce(auth.jwt() -> 'user_metadata' ->> 'nickname', '')) as nickname_claim
+  ),
+  repaired_profile as (
+    insert into public.profiles (id, username, nickname, role)
+    select
+      user_id,
+      case
+        when username_claim ~ '^[a-z0-9_-]{3,32}$'
+          and not exists (select 1 from public.profiles p where p.username = username_claim and p.id <> user_id)
+          then username_claim
+        else 'user_' || left(replace(user_id::text, '-', ''), 24)
+      end,
+      nullif(nickname_claim, ''),
+      'reporter'
+    from my_claims
+    where user_id is not null
+    on conflict (id) do update
+    set nickname = coalesce(public.profiles.nickname, excluded.nickname)
+    returning id
+  ),
+  me as (
+    select id from repaired_profile
+    union
+    select id from public.profiles where id = auth.uid()
+    limit 1
+  ),
+  target as (
+    select p.id
+    from public.profiles p
+    where p.username = lower(trim(target_username))
+      and p.id <> auth.uid()
+    limit 1
+  ),
+  existing as (
+    select f.id
+    from public.friendships f
+    join me m on true
+    join target t on
+      (f.requester_id = m.id and f.addressee_id = t.id)
+      or (f.requester_id = t.id and f.addressee_id = m.id)
+    limit 1
+  ),
+  inserted as (
+    insert into public.friendships (requester_id, addressee_id, status)
+    select me.id, target.id, 'pending'
+    from me
+    cross join target
+    where auth.uid() is not null
+      and not exists (select 1 from existing)
+    returning id
+  )
+  select id as friendship_id
+  from inserted;
+$$;
+
+drop function if exists public.respond_friend_request(uuid, boolean);
+
+create or replace function public.respond_friend_request(target_friendship_id uuid, accept boolean)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.friendships
+  set status = 'accepted'
+  where accept is true
+    and id = target_friendship_id
+    and addressee_id = auth.uid()
+    and status = 'pending';
+
+  delete from public.friendships
+  where accept is false
+    and id = target_friendship_id
+    and addressee_id = auth.uid()
+    and status = 'pending';
+$$;
+
+drop function if exists public.remove_friendship(uuid);
+
+create or replace function public.remove_friendship(target_friendship_id uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from public.friendships
+  where id = target_friendship_id
+    and (requester_id = auth.uid() or addressee_id = auth.uid());
+$$;
+
+drop function if exists public.list_friends_with_stats();
+drop function if exists public.list_friends_with_stats(text);
+
+create or replace function public.list_friends_with_stats(cache_bust text default 'web')
+returns table (
+  friendship_id uuid,
+  profile_id uuid,
+  username text,
+  nickname text,
+  status text,
+  direction text,
+  stamp_count int,
+  top_make text,
+  top_company text,
+  top_airport text,
+  latest_observed_at timestamptz,
+  friendship_created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  with visible_friendships as (
+    select
+      f.id as friendship_id,
+      f.status,
+      f.created_at as friendship_created_at,
+      case when f.requester_id = auth.uid() then f.addressee_id else f.requester_id end as friend_id,
+      case
+        when f.status = 'pending' and f.addressee_id = auth.uid() then 'incoming'
+        when f.status = 'pending' and f.requester_id = auth.uid() then 'outgoing'
+        else 'accepted'
+      end as direction
+    from public.friendships f
+    where f.requester_id = auth.uid()
+       or f.addressee_id = auth.uid()
+  ),
+  friend_reports as (
+    select
+      vf.friendship_id,
+      vf.friend_id,
+      vr.id,
+      vr.observed_at,
+      cm.name as make_name,
+      rc.name as company_name,
+      a.iata_code as airport_code
+    from visible_friendships vf
+    left join public.vehicle_reports vr
+      on vf.status = 'accepted'
+     and vr.reporter_id = vf.friend_id
+     and vr.deleted_at is null
+    left join public.car_makes cm on cm.id = vr.make_id
+    left join public.rental_companies rc on rc.id = vr.rental_company_id
+    left join public.airports a on a.id = vr.airport_id
+  )
+  select
+    vf.friendship_id,
+    p.id as profile_id,
+    p.username,
+    p.nickname,
+    vf.status,
+    vf.direction,
+    count(fr.id)::int as stamp_count,
+    (
+      select make_name
+      from friend_reports r
+      where r.friendship_id = vf.friendship_id and make_name is not null
+      group by make_name
+      order by count(*) desc, make_name asc
+      limit 1
+    ) as top_make,
+    (
+      select company_name
+      from friend_reports r
+      where r.friendship_id = vf.friendship_id and company_name is not null
+      group by company_name
+      order by count(*) desc, company_name asc
+      limit 1
+    ) as top_company,
+    (
+      select airport_code
+      from friend_reports r
+      where r.friendship_id = vf.friendship_id and airport_code is not null
+      group by airport_code
+      order by count(*) desc, airport_code asc
+      limit 1
+    ) as top_airport,
+    max(fr.observed_at) as latest_observed_at,
+    vf.friendship_created_at
+  from visible_friendships vf
+  join public.profiles p on p.id = vf.friend_id
+  left join friend_reports fr on fr.friendship_id = vf.friendship_id
+  group by vf.friendship_id, p.id, p.username, p.nickname, vf.status, vf.direction, vf.friendship_created_at
+  order by vf.status asc, stamp_count desc, p.username asc;
+$$;
+
+grant select, insert, update, delete on public.friendships to authenticated;
+grant execute on function public.send_friend_request(text) to authenticated;
+grant execute on function public.respond_friend_request(uuid, boolean) to authenticated;
+grant execute on function public.remove_friendship(uuid) to authenticated;
+grant execute on function public.list_friends_with_stats(text) to authenticated;
+
+-- =====================================================================
+-- Invite-only signup (mirrors RentyCar/Supabase/invite_signup_copy_paste.sql)
+-- =====================================================================
+
+create table if not exists public.invite_codes (
+  id uuid primary key default gen_random_uuid(),
+  code text unique not null,
+  created_at timestamptz not null default now(),
+  used_at timestamptz,
+  used_by uuid references auth.users(id) on delete set null
+);
+
+alter table public.invite_codes enable row level security;
+
+drop function if exists public.validate_invite_signup(text, text);
+
+create or replace function public.validate_invite_signup(target_username text, target_invite_code text)
+returns table (ok boolean, message text)
+language sql
+security definer
+set search_path = public
+as $$
+  with input as (
+    select
+      lower(trim(coalesce(target_username, ''))) as username,
+      upper(trim(coalesce(target_invite_code, ''))) as invite_code
+  )
+  select
+    case
+      when input.username !~ '^[a-z0-9_-]{3,32}$' then false
+      when input.invite_code = '' then false
+      when exists (select 1 from public.profiles p where p.username = input.username) then false
+      when not exists (select 1 from public.invite_codes ic where ic.code = input.invite_code and ic.used_at is null) then false
+      else true
+    end as ok,
+    case
+      when input.username !~ '^[a-z0-9_-]{3,32}$' then 'Username must be 3-32 characters and use only letters, numbers, underscores, or dashes.'
+      when input.invite_code = '' then 'Invite code is required.'
+      when exists (select 1 from public.profiles p where p.username = input.username) then 'Username is already taken.'
+      when not exists (select 1 from public.invite_codes ic where ic.code = input.invite_code and ic.used_at is null) then 'Invite code is invalid or already used.'
+      else 'Ready.'
+    end as message
+  from input;
+$$;
+
+create or replace function public.handle_invited_signup()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  invite_code text := upper(trim(coalesce(new.raw_user_meta_data ->> 'invite_code', '')));
+  requested_username text := lower(trim(coalesce(new.raw_user_meta_data ->> 'username', '')));
+  requested_nickname text := trim(coalesce(new.raw_user_meta_data ->> 'nickname', ''));
+  invite_row public.invite_codes%rowtype;
+begin
+  if invite_code = '' then
+    raise exception 'Invite code is required.';
+  end if;
+
+  if requested_username !~ '^[a-z0-9_-]{3,32}$' then
+    raise exception 'Username must be 3-32 characters and use only letters, numbers, underscores, or dashes.';
+  end if;
+
+  if length(requested_nickname) < 2 or length(requested_nickname) > 40 then
+    raise exception 'Nickname must be 2-40 characters.';
+  end if;
+
+  select *
+  into invite_row
+  from public.invite_codes
+  where code = invite_code
+    and used_at is null
+  for update;
+
+  if not found then
+    raise exception 'Invite code is invalid or already used.';
+  end if;
+
+  insert into public.profiles (id, username, nickname, role)
+  values (new.id, requested_username, requested_nickname, 'reporter');
+
+  update public.invite_codes
+  set used_at = now(),
+      used_by = new.id
+  where id = invite_row.id;
+
+  return new;
+exception
+  when unique_violation then
+    raise exception 'Username is already taken.';
+end;
+$$;
+
+drop trigger if exists rentycar_invited_signup on auth.users;
+
+create trigger rentycar_invited_signup
+after insert on auth.users
+for each row
+execute function public.handle_invited_signup();
+
+grant execute on function public.validate_invite_signup(text, text) to anon, authenticated;
+
+notify pgrst, 'reload schema';

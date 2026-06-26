@@ -15,6 +15,14 @@ export const formatDate = (value: string | null | undefined) =>
       }).format(new Date(value))
     : "Not reported";
 
+export const formatMonthYear = (value: string | null | undefined) =>
+  value
+    ? new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        year: "numeric",
+      }).format(new Date(value))
+    : "Not reported";
+
 export const formatCondition = (value: Condition | null | undefined) =>
   value ? value.charAt(0).toUpperCase() + value.slice(1) : "Not reported";
 
