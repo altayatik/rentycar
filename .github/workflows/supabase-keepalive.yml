@@ -1,0 +1,89 @@
+name: Supabase Keepalive
+
+# Supabase pauses free-tier projects after ~7 days with no API traffic.
+# This pings the REST + Auth endpoints on a schedule so the project stays active.
+#
+# NOTE: GitHub disables scheduled workflows in repos with no activity for 60 days.
+# The "touch-heartbeat" job commits a timestamp to a dedicated `keepalive` branch
+# to keep the repo active without triggering deploy.yml (which only runs on
+# master/main).
+
+on:
+  schedule:
+    # Every day at 07:13 UTC. Odd minute on purpose: GitHub delays/drops cron
+    # jobs scheduled on the hour because everyone picks :00.
+    - cron: "13 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST (PostgREST)
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_KEY:-}" ]; then
+            echo "::error::Missing SUPABASE_URL or SUPABASE_KEY repo secret."
+            exit 1
+          fi
+
+          ping() {
+            local label="$1"
+            local url="$2"
+            local code
+            code=$(curl -sS --max-time 30 --retry 3 --retry-delay 10 --retry-all-errors \
+              -o /tmp/resp.txt -w "%{http_code}" \
+              "$url" \
+              -H "apikey: ${SUPABASE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}")
+            echo "${label}: HTTP ${code}"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then
+              echo "::error::${label} failed (HTTP ${code})"
+              head -c 500 /tmp/resp.txt
+              return 1
+            fi
+          }
+
+          # Reads a public view -> exercises PostgREST + the database itself.
+          ping "rest/public_airport_stats" \
+            "${SUPABASE_URL}/rest/v1/public_airport_stats?select=airport_id&limit=1"
+
+          # Exercises GoTrue so the auth service is counted as active too.
+          ping "auth/health" "${SUPABASE_URL}/auth/v1/health"
+
+          echo "Supabase project pinged successfully."
+
+  touch-heartbeat:
+    # Keeps the repo "active" so GitHub does not disable the cron above at 60 days.
+    runs-on: ubuntu-latest
+    needs: ping
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Push heartbeat to keepalive branch
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Orphan branch holding exactly one file. Never merged, never deployed.
+          git checkout --orphan keepalive-tmp
+          git rm -rf --cached . >/dev/null
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .keepalive
+          git add .keepalive
+          git commit -m "chore: supabase keepalive heartbeat"
+          git push --force origin keepalive-tmp:keepalive
