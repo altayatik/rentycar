@@ -2,75 +2,783 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =====================================================================
+   RentyCar — "Terminal" design language.
+
+   The metaphor is an airport rental facility, not a field notebook:
+   a split-flap arrivals board, wayfinding signage, painted asphalt,
+   sodium-vapour lamps, and carbon-copy rental paperwork.
+
+   Type does a lot of the work here:
+     Barlow Condensed  signage / display  (transport heritage)
+     Barlow            body / UI
+     IBM Plex Mono     every number, code, plate, and board row
+   ===================================================================== */
+
 :root {
-  color: #15202b;
-  background: #f8fafc;
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  /* Board — the dark split-flap surface */
+  --board: #16181c;
+  --board-2: #1e2127;
+  --board-3: #282c34;
+  --board-line: #ffffff14;
+  --board-ink: #f2ede3;
+  --board-ink-2: #a8a396;
+
+  /* Terminal daylight — warm concrete, not cream */
+  --concrete: #eae5db;
+  --concrete-2: #ded8cc;
+  --concrete-3: #cfc8b9;
+  --paper: #f7f4ee;
+
+  /* Ink */
+  --ink: #1b1d21;
+  --ink-2: #4d5157;
+  --ink-3: #7c8189;
+  --ink-4: #a8adb5;
+
+  /* Signage accents */
+  --sodium: #f0a92b;        /* lamp amber — the signature */
+  --sodium-2: #ffc65c;
+  --sodium-tint: #fbeacb;
+  --safety: #e2622a;        /* cone orange */
+  --safety-tint: #fbe0d3;
+  --runway: #3a6ea5;        /* taxiway blue */
+  --runway-tint: #dceaf5;
+  --go: #2f9e6b;            /* clear-to-proceed green */
+  --go-tint: #d8f0e5;
+  --stop: #c1392f;
+  --stop-tint: #f8dcd9;
+  --asphalt: #3a3d42;
+
+  --line: #1b1d2118;
+  --line-2: #1b1d2130;
+  --line-3: #1b1d214d;
+
+  /* Elevation — tighter and more mechanical than before */
+  --sh-1: 0 1px 2px #1b1d2114, 0 2px 6px #1b1d210f;
+  --sh-2: 0 2px 4px #1b1d2114, 0 10px 24px -10px #1b1d2140;
+  --sh-3: 0 4px 10px #1b1d211a, 0 26px 50px -20px #1b1d2159;
+  --sh-board: 0 2px 0 #ffffff0a inset, 0 20px 50px -18px #000000a6;
+
+  /* Radii — much squarer. Signage isn't pill-shaped. */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+
+  --ease: cubic-bezier(0.2, 0.6, 0.3, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* -------------------------------------------------------------------
+     Compatibility aliases.
+
+     Feature pages still refer to the previous palette by name. Rather
+     than scatter a hundred find-and-replaces through working code, the
+     old names are remapped onto the terminal palette here, so every page
+     picks up the new language automatically. Prefer the names above when
+     writing anything new.
+     ------------------------------------------------------------------- */
+  --sky: var(--runway);
+  --sky-2: #5b8bbd;
+  --sky-tint: var(--runway-tint);
+  --mint: var(--go);
+  --mint-2: #57b98a;
+  --mint-tint: var(--go-tint);
+  --forest: #1d6b48;
+  --sage: #8a9a86;
+  --gold: var(--sodium);
+  --gold-2: var(--sodium-2);
+  --gold-tint: var(--sodium-tint);
+  --terracotta: var(--safety);
+  --terracotta-2: #ec8a5b;
+  --terracotta-tint: var(--safety-tint);
+  --lavender: #5f52b5;
+  --lavender-tint: #e6e2f6;
+  --danger: var(--stop);
+  --danger-tint: var(--stop-tint);
+  --canvas: var(--concrete);
+  --canvas-2: var(--concrete-2);
+  --glass: #f7f4ee99;
+  --glass-2: #f7f4eecc;
+  --glass-3: var(--paper);
+  --sh-inset: inset 0 1px 0 #ffffff80;
+  --r-xl: var(--r-lg);
+
+  color: var(--ink);
+  background: var(--concrete);
+  font-family: Barlow, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
   margin: 0;
   min-width: 320px;
-  background:
-    radial-gradient(circle at top left, rgba(67, 56, 202, 0.07), transparent 28rem),
-    radial-gradient(circle at bottom right, rgba(225, 29, 72, 0.05), transparent 30rem),
-    #f8fafc;
+  color: var(--ink);
+  /* MUST stay transparent.
+     BackgroundArt is a fixed layer at z-index -10. Per CSS painting order,
+     negative z-index children paint at step 2 but in-flow block backgrounds
+     (including body's) paint at step 3 — so an opaque body background covers
+     the whole illustration. The base colour lives on :root instead, where it
+     propagates to the canvas and paints beneath everything. */
+  background: transparent;
+}
+
+::selection {
+  background: var(--sodium);
+  color: var(--ink);
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--sodium);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------
+   Motion
+   --------------------------------------------------------------------- */
+
+@keyframes rc-flip {
+  0%   { transform: rotateX(-90deg); opacity: 0; }
+  100% { transform: rotateX(0deg); opacity: 1; }
+}
+@keyframes rc-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes rc-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes rc-pop {
+  0%   { opacity: 0; transform: scale(0.97); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes rc-blink {
+  0%, 45%  { opacity: 1; }
+  50%, 95% { opacity: 0.25; }
+  100%     { opacity: 1; }
+}
+@keyframes rc-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes rc-shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+/* Scene animation. Declared in CSS rather than as SVG <animate> elements:
+   SMIL is driven on the main thread and was the main source of jank. These
+   only touch opacity/transform, so the compositor handles them. */
+@keyframes rc-lamp {
+  0%, 100% { opacity: 0.78; }
+  50%      { opacity: 1; }
+}
+@keyframes rc-beacon {
+  0%, 100% { opacity: 0.22; }
+  50%      { opacity: 1; }
+}
+@keyframes rc-gate {
+  0%, 100% { opacity: 0.2; }
+  50%      { opacity: 0.46; }
+}
+@keyframes rc-approach {
+  from { transform: translate(-240px, 0); }
+  to   { transform: translate(1420px, 58px); }
+}
+@keyframes rc-sweep {
+  from { transform: translateX(-140%) skewX(-18deg); }
+  to   { transform: translateX(320%) skewX(-18deg); }
+}
+@keyframes rc-unlock {
+  0%   { transform: scale(0.72) rotate(-10deg); opacity: 0; }
+  55%  { transform: scale(1.08) rotate(3deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes rc-scan {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(900%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 @layer components {
-  .input {
-    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100;
+  /* -------------------------------------------------------------------
+     Type
+     ------------------------------------------------------------------- */
+
+  /* Line heights below ~1.05 clip the cap/descender box of Barlow
+     Condensed inside any container with overflow hidden, which is what
+     was cutting off headings and figures across the app. Everything here
+     now leaves headroom. */
+  .sign {
+    font-family: "Barlow Condensed", Barlow, sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.005em;
+    line-height: 1.08;
+    text-transform: uppercase;
+  }
+
+  .h-display {
+    @apply text-5xl sm:text-6xl lg:text-7xl;
+    font-family: "Barlow Condensed", Barlow, sans-serif;
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: 0.002em;
+    text-transform: uppercase;
+    color: var(--ink);
+    padding-bottom: 0.04em;
+  }
+
+  .h1 {
+    @apply text-3xl sm:text-4xl;
+    font-family: "Barlow Condensed", Barlow, sans-serif;
+    font-weight: 800;
+    line-height: 1.08;
+    text-transform: uppercase;
+    color: var(--ink);
+    padding-bottom: 0.03em;
+  }
+
+  .h2 {
+    @apply text-xl sm:text-2xl;
+    font-family: "Barlow Condensed", Barlow, sans-serif;
+    font-weight: 700;
+    line-height: 1.16;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+  }
+
+  .h3 {
+    @apply text-base font-bold;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  /* Stencilled label, as painted on a bay or printed on a form. */
+  .stencil {
+    @apply text-[11px] font-bold uppercase;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: 0.16em;
+    line-height: 1.5;
+    color: var(--ink-3);
+  }
+
+  .mono {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Odometer-style figure. Tabular so columns of numbers line up. */
+  .odo {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+  }
+
+  /* Compatibility aliases for classes the feature pages already use. */
+  .eyebrow { @apply stencil; }
+
+  .card-dashed { @apply bay; }
+
+  .card-quiet {
+    background: #ffffff80;
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-sm);
+  }
+
+  .card-solid {
+    background: var(--paper);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-md);
+    box-shadow: var(--sh-1);
+  }
+
+  /* Oversized ghost figure behind a panel — now set in condensed signage
+     type rather than the previous rounded display face. */
+  .ghost-num {
+    @apply absolute select-none leading-none;
+    font-family: "Barlow Condensed", Barlow, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    opacity: 0.1;
+    pointer-events: none;
+  }
+
+  .muted   { color: var(--ink-2); }
+  .muted-2 { color: var(--ink-3); }
+  .hint    { @apply text-xs; color: var(--ink-3); }
+
+  /* -------------------------------------------------------------------
+     The board — dark split-flap surface
+     ------------------------------------------------------------------- */
+
+  .board {
+    background: linear-gradient(180deg, var(--board-2) 0%, var(--board) 100%);
+    border: 1px solid #000000cc;
+    border-radius: var(--r-md);
+    box-shadow: var(--sh-board);
+    color: var(--board-ink);
+    overflow: hidden;
+  }
+
+  .board-head {
+    @apply flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5;
+    background: #0f1114;
+    border-bottom: 1px solid var(--board-line);
+  }
+
+  /* Fixed height so rows stay uniform whether or not a plate is present —
+     uneven rows were making the board look ragged. */
+  .board-row {
+    @apply grid items-center gap-3 px-4 sm:px-5;
+    min-height: 58px;
+    border-bottom: 1px solid var(--board-line);
+    transition: background-color 0.15s var(--ease);
+  }
+
+  .board-row-head {
+    min-height: 34px;
+  }
+
+  /* Responsive board grid. A fixed six-column template overflowed hard on a
+     phone; below md only airport / vehicle / condition are shown and the
+     rest of the cells are hidden by their own utility classes. */
+  .board-grid {
+    grid-template-columns: 52px minmax(0, 1fr) 78px;
+  }
+
+  @media (min-width: 768px) {
+    .board-grid {
+      grid-template-columns: 72px minmax(0, 1.6fr) minmax(0, 1fr) 92px 96px 108px;
+    }
+  }
+
+  .board-row:hover {
+    background: #ffffff08;
+  }
+
+  .board-row:last-child { border-bottom: none; }
+
+  /* Individual flap tile — the character cells of the board. */
+  .flap {
+    @apply inline-flex items-center justify-center;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 600;
+    background: var(--board-3);
+    color: var(--board-ink);
+    border-radius: 3px;
+    box-shadow: inset 0 -1px 0 #00000066, inset 0 1px 0 #ffffff12;
+    /* Hairline where the two halves of a real flap meet */
+    background-image: linear-gradient(
+      180deg,
+      transparent calc(50% - 1px),
+      #00000059 50%,
+      transparent calc(50% + 1px)
+    );
+  }
+
+  .board-amber { color: var(--sodium); }
+  .board-dim   { color: var(--board-ink-2); }
+
+  /* Live indicator dot */
+  .live-dot {
+    @apply inline-block h-1.5 w-1.5 rounded-full;
+    background: var(--go);
+    box-shadow: 0 0 0 3px #2f9e6b33;
+    animation: rc-blink 2.4s ease-in-out infinite;
+  }
+
+  /* -------------------------------------------------------------------
+     Daylight surfaces
+     ------------------------------------------------------------------- */
+
+  /* Slightly translucent on purpose. Fully opaque cards covered the whole
+     viewport and made the illustrated backdrop invisible; at 86% the grid,
+     route arcs and apron read through without hurting text contrast.
+     No backdrop-filter here — dozens of blurred layers is what wedged the
+     renderer once already. */
+  .card {
+    background: rgba(247, 244, 238, 0.86);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-md);
+    box-shadow: var(--sh-1);
+    transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease),
+      border-color 0.2s var(--ease);
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sh-2);
+    border-color: var(--line-3);
+  }
+
+  /* Painted-line panel, like a marked bay on the asphalt. */
+  .bay {
+    background: #ffffff5c;
+    border: 2px dashed var(--line-2);
+    border-radius: var(--r-sm);
+  }
+
+  /* Carbon-copy paperwork. */
+  .stub {
+    position: relative;
+    background: var(--paper);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-sm);
+    box-shadow: var(--sh-1);
+  }
+
+  /* Perforated tear edge down the left of a stub. */
+  .stub-perf::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 2.25rem;
+    width: 0;
+    border-left: 2px dotted var(--line-2);
+  }
+
+  /* ---------------------------------------------------------------------
+     Passport stamps — the stamp book
+     --------------------------------------------------------------------- */
+
+  /* Circular passport cancellation. `currentColor` carries the accent so a
+     single style prop recolours the whole stamp. */
+  .passport {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 0.6rem;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    text-align: center;
+    transition: transform 0.3s var(--ease);
+  }
+
+  /* Inner ring, as on a real cancellation. */
+  .passport::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border: 1px dashed currentColor;
+    border-radius: 50%;
+    opacity: 0.5;
+  }
+
+  .passport:hover {
+    transform: rotate(0deg) scale(1.06);
+  }
+
+  /* ---------------------------------------------------------------------
+     Milestone tiles — the quest board
+     --------------------------------------------------------------------- */
+
+  .milestone {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--r-md);
+    transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+  }
+
+  .milestone-earned:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--sh-2);
+  }
+
+  .milestone-icon {
+    transition: transform 0.32s var(--ease-out);
+  }
+
+  .milestone-earned:hover .milestone-icon {
+    transform: scale(1.1) rotate(-6deg);
+  }
+
+  /* Light sweeps across an earned tile on hover. */
+  .milestone-earned::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 45%;
+    background: linear-gradient(90deg, transparent, #ffffff8c, transparent);
+    transform: translateX(-140%) skewX(-18deg);
+    pointer-events: none;
+  }
+
+  .milestone-earned:hover::after {
+    animation: rc-sweep 0.8s var(--ease-out);
+  }
+
+  /* Rubber-stamp treatment for condition marks. */
+  .stamp {
+    @apply inline-flex items-center justify-center px-2 py-0.5 text-[11px] font-bold uppercase;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: 0.1em;
+    border: 2px solid currentColor;
+    border-radius: 3px;
+    transform: rotate(-3deg);
+    opacity: 0.92;
+  }
+
+  /* -------------------------------------------------------------------
+     Buttons — squared signage, not pills
+     ------------------------------------------------------------------- */
+
+  .btn {
+    @apply relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap px-4 py-2.5 text-sm font-bold uppercase;
+    font-family: Barlow, sans-serif;
+    letter-spacing: 0.04em;
+    border-radius: var(--r-xs);
+    transition: transform 0.12s var(--ease), background-color 0.15s var(--ease),
+      box-shadow 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+  }
+
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { @apply cursor-not-allowed opacity-50; transform: none; }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+    box-shadow: var(--sh-1);
+  }
+  .btn-primary:hover:not(:disabled) { background: #000; box-shadow: var(--sh-2); }
+
+  /* The signature call to action: lit sodium lamp. */
+  .btn-accent {
+    background: var(--sodium);
+    color: #241a05;
+    box-shadow: var(--sh-1), 0 0 0 0 #f0a92b00;
+  }
+  .btn-accent:hover:not(:disabled) {
+    background: var(--sodium-2);
+    box-shadow: var(--sh-2), 0 0 24px -4px #f0a92b99;
+  }
+
+  .btn-secondary {
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--line-3);
+  }
+  .btn-secondary:hover:not(:disabled) { background: #fff; border-color: var(--ink-3); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-2);
+  }
+  .btn-ghost:hover:not(:disabled) { background: #1b1d2114; color: var(--ink); }
+
+  .btn-danger {
+    background: var(--stop);
+    color: #fff;
+  }
+  .btn-danger:hover:not(:disabled) { background: #a92f26; }
+
+  .btn-sm { @apply px-3 py-1.5 text-xs; }
+  .btn-lg { @apply px-6 py-3 text-base; }
+  .btn-icon { @apply p-2; }
+
+  /* -------------------------------------------------------------------
+     Forms — kiosk fields
+     ------------------------------------------------------------------- */
+
+  .input, .select, .textarea {
+    @apply w-full px-3 py-2.5 text-sm outline-none;
+    font-family: Barlow, sans-serif;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line-3);
+    border-radius: var(--r-xs);
+    transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+  }
+
+  .input::placeholder, .textarea::placeholder { color: var(--ink-4); }
+
+  .input:focus, .select:focus, .textarea:focus {
+    border-color: var(--sodium);
+    box-shadow: 0 0 0 3px #f0a92b40;
+  }
+
+  .input-error, .input-error:focus {
+    border-color: var(--stop);
+    box-shadow: 0 0 0 3px #c1392f33;
+  }
+
+  .select {
+    @apply appearance-none pr-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234d5157' stroke-width='3' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
   }
 
   .label {
-    @apply text-sm font-medium text-slate-700;
+    @apply text-[11px] font-bold uppercase;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: 0.14em;
+    color: var(--ink-2);
   }
 
-  .button-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-800 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-sm;
+  .field-error { @apply text-xs font-semibold; color: var(--stop); }
+
+  .tile {
+    @apply flex cursor-pointer items-center gap-2.5 px-3 py-2.5 text-sm font-semibold;
+    background: #fff;
+    border: 1px solid var(--line-3);
+    border-radius: var(--r-xs);
+    color: var(--ink-2);
+    transition: all 0.15s var(--ease);
+  }
+  .tile:hover { border-color: var(--ink-3); }
+  .tile-active {
+    background: var(--sodium-tint);
+    border-color: var(--sodium);
+    color: var(--ink);
   }
 
-  .button-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-sm;
+  /* -------------------------------------------------------------------
+     Badges — luggage-tag rectangles
+     ------------------------------------------------------------------- */
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold uppercase;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: 0.08em;
+    border-radius: 3px;
   }
 
-  .panel {
-    @apply rounded-2xl border border-slate-200 bg-white shadow-panel;
+  .badge-sky      { background: var(--runway-tint); color: #24557d; }
+  .badge-runway   { background: var(--runway-tint); color: #24557d; }
+  .badge-mint     { background: var(--go-tint);     color: #1d6b48; }
+  .badge-gold     { background: var(--sodium-tint); color: #8a6111; }
+  .badge-terra    { background: var(--safety-tint); color: #9c3f14; }
+  .badge-lavender { background: #e6e2f6;            color: #4b3f96; }
+  .badge-danger   { background: var(--stop-tint);   color: #8f281f; }
+  .badge-neutral  { background: #1b1d2114;          color: var(--ink-2); }
+
+  /* -------------------------------------------------------------------
+     Layout
+     ------------------------------------------------------------------- */
+
+  .shell { @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8; }
+  .divider { height: 1px; background: var(--line); }
+
+  /* Hazard stripe rule, used to separate major zones. */
+  .hazard {
+    height: 6px;
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--sodium) 0 10px,
+      #1b1d21 10px 20px
+    );
+    opacity: 0.5;
+    border-radius: 2px;
   }
 
-  /* ---- App-cloned dark "glass" theme, used on every page except the public map/home page ---- */
+  /* -------------------------------------------------------------------
+     Tables
+     ------------------------------------------------------------------- */
 
-  .night-shell {
-    @apply bg-night-gradient;
+  .table-wrap {
+    @apply overflow-x-auto;
+    border-radius: var(--r-md);
+    border: 1px solid var(--line-2);
+    background: rgba(247, 244, 238, 0.88);
+    box-shadow: var(--sh-1);
   }
 
-  .glass-panel {
-    @apply rounded-3xl border border-white/10 bg-white/[0.06] shadow-glass backdrop-blur-xl;
+  .table {
+    @apply w-full text-left text-sm;
+    border-collapse: separate;
+    border-spacing: 0;
   }
 
-  .glass-input {
-    @apply w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-500 hover:border-white/20 focus:border-teal-400/60 focus:ring-2 focus:ring-teal-400/20;
+  .table thead th {
+    @apply whitespace-nowrap px-4 py-2.5 text-[11px] font-bold uppercase;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+    background: #1b1d210a;
+    border-bottom: 1px solid var(--line-2);
   }
 
-  .glass-label {
-    @apply text-sm font-medium text-slate-300;
+  .table tbody td {
+    @apply px-4 py-2.5 align-middle;
+    color: var(--ink-2);
+    border-bottom: 1px solid var(--line);
   }
 
-  .glass-button-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-teal-500 px-4 py-2.5 text-sm font-semibold text-night-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0;
+  .table tbody tr { transition: background-color 0.15s var(--ease); }
+  .table tbody tr:hover td { background: #f0a92b14; }
+  .table tbody tr:last-child td { border-bottom: none; }
+
+  /* -------------------------------------------------------------------
+     Loading
+     ------------------------------------------------------------------- */
+
+  .skeleton {
+    background: linear-gradient(90deg, #1b1d210d 25%, #1b1d211c 37%, #1b1d210d 63%);
+    background-size: 200% 100%;
+    animation: rc-shimmer 1.4s ease-in-out infinite;
+    border-radius: var(--r-xs);
   }
 
-  .glass-button-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-slate-200 shadow-sm transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0;
+  .spinner {
+    @apply inline-block rounded-full border-2;
+    border-color: var(--line-3);
+    border-top-color: var(--sodium);
+    animation: rc-spin 0.7s linear infinite;
   }
+}
 
-  .glass-pill {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold;
-  }
+@layer utilities {
+  .animate-rise { animation: rc-rise 0.45s var(--ease-out) both; }
+  .animate-fade { animation: rc-fade 0.35s var(--ease-out) both; }
+  .animate-pop  { animation: rc-pop 0.3s var(--ease-out) both; }
+  .animate-flip { animation: rc-flip 0.4s var(--ease-out) both; transform-origin: center top; }
+  .animate-unlock { animation: rc-unlock 0.55s var(--ease-out) both; }
 
-  .font-display {
-    font-family: "Outfit", ui-sans-serif, system-ui, sans-serif;
-  }
+  .stagger > * { animation: rc-rise 0.45s var(--ease-out) both; }
+  .stagger > *:nth-child(1) { animation-delay: 0.03s; }
+  .stagger > *:nth-child(2) { animation-delay: 0.06s; }
+  .stagger > *:nth-child(3) { animation-delay: 0.09s; }
+  .stagger > *:nth-child(4) { animation-delay: 0.12s; }
+  .stagger > *:nth-child(5) { animation-delay: 0.15s; }
+  .stagger > *:nth-child(6) { animation-delay: 0.18s; }
+  .stagger > *:nth-child(7) { animation-delay: 0.21s; }
+  .stagger > *:nth-child(8) { animation-delay: 0.24s; }
+  .stagger > *:nth-child(n + 9) { animation-delay: 0.27s; }
+
+  .ts-lamp   { animation: rc-lamp 7s ease-in-out infinite; }
+  .ts-beacon { animation: rc-beacon 3.6s ease-in-out infinite; }
+  .ts-gate   { animation: rc-gate 9s ease-in-out infinite; }
+  .ts-plane  { animation: rc-approach 42s linear infinite; }
+
+  /* Board rows fade up rather than flipping on rotateX — the 3-D flip
+     forced a layer repaint per row and read as stutter. */
+  .flip-stagger > * { animation: rc-rise 0.4s var(--ease-out) both; }
+  .flip-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+  .flip-stagger > *:nth-child(2) { animation-delay: 0.06s; }
+  .flip-stagger > *:nth-child(3) { animation-delay: 0.10s; }
+  .flip-stagger > *:nth-child(4) { animation-delay: 0.14s; }
+  .flip-stagger > *:nth-child(5) { animation-delay: 0.18s; }
+  .flip-stagger > *:nth-child(6) { animation-delay: 0.22s; }
+  .flip-stagger > *:nth-child(n + 7) { animation-delay: 0.26s; }
+
+  .text-ink   { color: var(--ink); }
+  .text-ink-2 { color: var(--ink-2); }
+  .text-ink-3 { color: var(--ink-3); }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }

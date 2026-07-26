@@ -1,41 +1,44 @@
 import {
+  ArrowRight,
   Building2,
   ClipboardList,
   Gauge,
-  Map,
   MapPin,
-  Sparkles,
+  PlusCircle,
   TrendingDown,
   Trophy,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CarMakeBadge } from "../../components/CarMakeBadge";
-import { EmptyState } from "../../components/EmptyState";
-import { ErrorState } from "../../components/ErrorState";
 import {
   emptyReportFilters,
   FilterBar,
   type AirportFilterOption,
   type ReportFilters,
 } from "../../components/FilterBar";
-import { LoadingState } from "../../components/LoadingState";
+import { NorthAmericaRegionMap, type SelectedRegion } from "../../components/NorthAmericaRegionMap";
+import { TerminalScene } from "../../components/TerminalScene";
 import {
-  NorthAmericaRegionMap,
-  type SelectedRegion,
-} from "../../components/NorthAmericaRegionMap";
-import { StatCard } from "../../components/StatCard";
+  Board,
+  BoardHeaderRow,
+  Button,
+  Callout,
+  CountUp,
+  ErrorState,
+  Flaps,
+  Reveal,
+  SectionHeader,
+  Stamp,
+  StatCard,
+} from "../../components/ui";
 import { fallbackAirportStats } from "../../data/fallbackAirports";
 import { formatDate, formatMileage, formatNumber } from "../../lib/formatters";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { useAuth } from "../auth/authStore";
-import { useTheme } from "../theme/themeStore";
 import type { PublicAirportStats, PublicRecentReport, PublicRegionStats } from "../../lib/types";
 
 export function HomePage() {
-  const { user } = useAuth();
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
+  const { user, profile } = useAuth();
   const [airportStats, setAirportStats] = useState<PublicAirportStats[]>(fallbackAirportStats);
   const [regionStats, setRegionStats] = useState<PublicRegionStats[]>([]);
   const [recentReports, setRecentReports] = useState<PublicRecentReport[]>([]);
@@ -44,6 +47,16 @@ export function HomePage() {
   const [error, setError] = useState("");
   const [filters, setFilters] = useState<ReportFilters>(emptyReportFilters);
   const [selectedRegion, setSelectedRegion] = useState<SelectedRegion | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [searchResults, setSearchResults] = useState<PublicRecentReport[]>([]);
+  const [searchTotal, setSearchTotal] = useState(0);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [catalog, setCatalog] = useState<{ companies: string[]; makes: string[]; models: string[] }>({
+    companies: [],
+    makes: [],
+    models: [],
+  });
 
   useEffect(() => {
     if (!supabase) {
@@ -54,12 +67,18 @@ export function HomePage() {
 
     const loadPublicData = async () => {
       setLoading(true);
-      const [statsResult, regionStatsResult, reportsResult, companiesResult] = await Promise.all([
-        client.from("public_airport_stats").select("*").order("report_count", { ascending: false }),
-        client.from("public_region_stats").select("*").order("report_count", { ascending: false }),
-        client.from("public_recent_reports").select("*").limit(100),
-        client.from("rental_companies").select("id", { count: "exact", head: true }).eq("is_active", true),
-      ]);
+      const [statsResult, regionStatsResult, reportsResult, companiesResult, makesResult, modelsResult] =
+        await Promise.all([
+          client.from("public_airport_stats").select("*").order("report_count", { ascending: false }),
+          client.from("public_region_stats").select("*").order("report_count", { ascending: false }),
+          client.from("public_recent_reports").select("*").limit(100),
+          // Filter dropdowns are built from the catalogue tables, not from
+          // the recent-reports array — that array is capped at 100 rows, so
+          // the menus were missing most makes, models and companies.
+          client.from("rental_companies").select("name").eq("is_active", true).order("name"),
+          client.from("car_makes").select("name").eq("is_active", true).order("name"),
+          client.from("car_models").select("name").eq("is_active", true).order("name"),
+        ]);
 
       const loadError =
         statsResult.error ?? regionStatsResult.error ?? reportsResult.error ?? companiesResult.error;
@@ -68,7 +87,7 @@ export function HomePage() {
           loadError.code === "PGRST205" || loadError.message.toLowerCase().includes("schema cache");
         setError(
           isMissingSchema
-            ? "Supabase is connected, but RentyCar tables/views are not installed yet. Run supabase/schema.sql and supabase/seed.sql in the Supabase SQL editor."
+            ? "Supabase is connected, but the RentyCar tables and views are not installed yet. Run supabase/schema.sql, then supabase/migrations/0001_open_signup_and_admin.sql."
             : loadError.message,
         );
       } else {
@@ -76,13 +95,87 @@ export function HomePage() {
         setAirportStats(stats.length ? stats : fallbackAirportStats);
         setRegionStats((regionStatsResult.data ?? []) as PublicRegionStats[]);
         setRecentReports((reportsResult.data ?? []) as PublicRecentReport[]);
-        setCompanyCount(companiesResult.count ?? 0);
+
+        const companyNames = ((companiesResult.data ?? []) as Array<{ name: string }>).map((r) => r.name);
+        setCatalog({
+          companies: companyNames,
+          makes: ((makesResult.data ?? []) as Array<{ name: string }>).map((r) => r.name),
+          models: unique(((modelsResult.data ?? []) as Array<{ name: string }>).map((r) => r.name)),
+        });
+        setCompanyCount(companyNames.length);
       }
       setLoading(false);
     };
 
     void loadPublicData();
   }, []);
+
+  // Any filter set, or a region picked on the map, means the visitor is
+  // searching rather than browsing.
+  const isSearching = useMemo(
+    () => Object.values(filters).some((value) => value !== "") || selectedRegion !== null,
+    [filters, selectedRegion],
+  );
+
+  /**
+   * Search runs in Postgres, not the browser.
+   *
+   * It used to filter the `public_recent_reports` array, but that view is
+   * capped at 100 rows — anything older simply could not be found. The RPC
+   * searches the whole register.
+   */
+  useEffect(() => {
+    if (!supabase || !isSearching) {
+      setSearchResults([]);
+      setSearchTotal(0);
+      return;
+    }
+
+    const client = supabase;
+    const controller = { cancelled: false };
+
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      const { data, error: rpcError } = await client.rpc("search_public_reports", {
+        // The airport datalist fills in "LAS - Las Vegas"; send just the
+        // code so an exact IATA match still works.
+        airport_q: normalizeAirportQuery(filters.airportQuery),
+        company_q: filters.companyQuery || null,
+        plate_q: filters.licensePlateQuery || null,
+        country_q: selectedRegion?.country || filters.country || null,
+        region_q: selectedRegion?.regionCode || (filters.region ? filters.region.split("-")[1] : null),
+        make_q: filters.make || null,
+        model_q: filters.model || null,
+        condition_q: filters.condition || null,
+        mileage_min: filters.mileageMin ? Number(filters.mileageMin) : null,
+        mileage_max: filters.mileageMax ? Number(filters.mileageMax) : null,
+        observed_from: filters.observedFrom || null,
+        observed_to: filters.observedTo || null,
+        max_rows: 200,
+      });
+
+      if (controller.cancelled) return;
+
+      if (rpcError) {
+        setSearchError(
+          `${rpcError.message} — if this mentions a missing function, run supabase/migrations/0002_public_search.sql.`,
+        );
+        setSearchResults([]);
+        setSearchTotal(0);
+      } else {
+        const rows = (data ?? []) as Array<PublicRecentReport & { total_matches: number }>;
+        setSearchError("");
+        setSearchResults(rows);
+        setSearchTotal(rows[0]?.total_matches ?? 0);
+      }
+      setSearching(false);
+    }, 260);
+
+    return () => {
+      controller.cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [filters, selectedRegion, isSearching]);
 
   const filteredReports = useMemo(() => {
     return recentReports.filter((report) => {
@@ -137,7 +230,7 @@ export function HomePage() {
           regionCode: airport.region_code ?? airport.state,
           regionName: airport.region_name ?? airport.state,
         })),
-      companies: unique(recentReports.map((report) => report.rental_company_name)),
+      companies: catalog.companies,
       regions: uniqueBy(
         airportStats
           .filter((airport) => airport.region_code && airport.region_name)
@@ -148,24 +241,19 @@ export function HomePage() {
           })),
         (region) => region.key,
       ).sort((a, b) => a.label.localeCompare(b.label)),
-      makes: unique(recentReports.map((report) => report.make)),
-      models: unique(recentReports.map((report) => report.model)),
+      makes: catalog.makes,
+      models: catalog.models,
     }),
-    [airportStats, recentReports, selectedRegion],
+    [airportStats, catalog, selectedRegion],
   );
 
   const totalReports = airportStats.reduce((sum, airport) => sum + airport.report_count, 0);
   const airportsCovered = airportStats.filter((airport) => airport.report_count > 0).length;
-  const usRegionsCovered = new Set(
-    airportStats
-      .filter((airport) => airport.country === "US" && airport.report_count > 0 && airport.region_code)
-      .map((airport) => airport.region_code),
+
+  const regionsCovered = new Set(
+    airportStats.filter((a) => a.report_count > 0 && a.region_code).map((a) => `${a.country}-${a.region_code}`),
   ).size;
-  const canadaRegionsCovered = new Set(
-    airportStats
-      .filter((airport) => airport.country === "CA" && airport.report_count > 0 && airport.region_code)
-      .map((airport) => airport.region_code),
-  ).size;
+
   const mostReportedMake = useMemo(() => {
     const counts = recentReports.reduce<Record<string, number>>((acc, report) => {
       acc[report.make] = (acc[report.make] ?? 0) + 1;
@@ -188,9 +276,11 @@ export function HomePage() {
     );
   }, [recentReports]);
 
-  const mostActiveAirport = useMemo(() => {
-    return airportStats.filter((airport) => airport.report_count > 0).sort((a, b) => b.report_count - a.report_count)[0] ?? null;
-  }, [airportStats]);
+  const mostActiveAirport = useMemo(
+    () =>
+      airportStats.filter((a) => a.report_count > 0).sort((a, b) => b.report_count - a.report_count)[0] ?? null,
+    [airportStats],
+  );
 
   const newestReport = useMemo(() => {
     if (!recentReports.length) return null;
@@ -199,261 +289,484 @@ export function HomePage() {
     );
   }, [recentReports]);
 
+  const visibleRows = showAll ? filteredReports : filteredReports.slice(0, 12);
+
+  const signedOut = !user;
+
   return (
-    <div className="space-y-8">
-      <section
-        className={
-          isDark
-            ? "glass-panel relative overflow-hidden px-5 py-4 sm:px-6"
-            : "relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-panel sm:px-6"
-        }
-      >
-        <div className="relative flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <Sparkles className={`h-5 w-5 ${isDark ? "text-teal-300" : "text-indigo-600"}`} aria-hidden="true" />
-            <h1 className={`text-lg font-semibold leading-tight sm:text-xl ${isDark ? "font-display text-white" : "text-slate-950"}`}>
-              RentyCar — real rental car sightings from airport lots.
-            </h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <a className={isDark ? "glass-button-primary" : "button-primary"} href="#reports">
-              View public reports
-            </a>
-            {user ? (
-              <Link className={isDark ? "glass-button-secondary" : "button-secondary"} to="/dashboard">
-                Go to dashboard
-              </Link>
-            ) : (
-              <Link className={isDark ? "glass-button-secondary" : "button-secondary"} to="/login">
-                Sign in if assigned
-              </Link>
-            )}
-          </div>
-        </div>
-        {!isSupabaseConfigured ? (
+    <div className="space-y-14">
+      {/* ============================ 1 · BOARDING ========================= */}
+      {signedOut ? (
+        <section className="animate-rise pt-6">
           <div
-            className={`relative mt-3 rounded-xl border p-3 text-xs ${
-              isDark ? "border-amber-400/20 bg-amber-400/10 text-amber-200" : "border-amber-200 bg-amber-50 text-amber-800"
-            }`}
+            className="relative overflow-hidden"
+            style={{
+              borderRadius: "var(--r-md)",
+              borderTop: "3px solid var(--sodium)",
+              boxShadow: "var(--sh-board)",
+              background: "#16181c",
+            }}
           >
-            Supabase is not configured yet, so the atlas is showing fallback US and Canada airport regions.
+            {/* Illustrated lot scene */}
+            <div className="absolute inset-0">
+              <TerminalScene className="h-full w-full" />
+              {/* readability scrim, left-weighted */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(96deg, #121418f2 0%, #12141ae0 38%, #12141a80 62%, transparent 88%)",
+                }}
+              />
+            </div>
+
+            <div className="relative px-6 py-14 sm:px-10 lg:py-20">
+              <p className="stencil" style={{ color: "var(--sodium)" }}>
+                Now boarding · Free to join
+              </p>
+              <h1 className="h-display mt-4 max-w-2xl" style={{ color: "var(--board-ink)" }}>
+                Log what
+                <br />
+                you <span style={{ color: "var(--sodium)" }}>drove</span>
+              </h1>
+              <p
+                className="mt-5 max-w-lg text-base leading-relaxed"
+                style={{ color: "var(--board-ink-2)" }}
+              >
+                RentyCar is a community register of what&apos;s actually sitting on airport rental
+                lots — make, mileage, tyres, dents. Browse it free, or add what you drove.
+              </p>
+
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Link to="/signup" className="btn btn-accent btn-lg">
+                  Create account
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+                <Link
+                  to="/login"
+                  className="btn btn-lg"
+                  style={{ color: "var(--board-ink)", border: "1px solid #ffffff2e" }}
+                >
+                  Sign in
+                </Link>
+              </div>
+
+              {/* live counters */}
+              <div className="mt-10 flex flex-wrap gap-8">
+                {[
+                  { label: "Sightings", value: totalReports, accent: "var(--sodium)" },
+                  { label: "Airport lots", value: airportsCovered },
+                  { label: "Regions", value: regionsCovered },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <p className="stencil" style={{ color: "#8d8a80" }}>
+                      {item.label}
+                    </p>
+                    <p
+                      className="odo mt-1 text-3xl"
+                      style={{ color: item.accent ?? "var(--board-ink)" }}
+                    >
+                      <CountUp value={item.value} />
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : (
+        /* Signed in: same illustrated stage, different job to do. */
+        <section className="animate-rise pt-6">
+          <div
+            className="relative overflow-hidden"
+            style={{
+              borderRadius: "var(--r-md)",
+              borderTop: "3px solid var(--sodium)",
+              boxShadow: "var(--sh-board)",
+              background: "#16181c",
+            }}
+          >
+            <div className="absolute inset-0">
+              <TerminalScene className="h-full w-full" />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(96deg, #121418f2 0%, #12141ae0 38%, #12141a80 64%, transparent 90%)",
+                }}
+              />
+            </div>
+
+            <div className="relative px-6 py-12 sm:px-10">
+              <p className="stencil" style={{ color: "var(--sodium)" }}>
+                Welcome back, {profile?.nickname || profile?.username}
+              </p>
+              <h1 className="h-display mt-3 max-w-2xl" style={{ color: "var(--board-ink)" }}>
+                What&apos;s on
+                <br />
+                the <span style={{ color: "var(--sodium)" }}>lot</span>
+              </h1>
+
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                {profile?.status !== "pending" ? (
+                  <Link to="/submit" className="btn btn-accent btn-lg">
+                    <PlusCircle className="h-4 w-4" aria-hidden="true" />
+                    Log a sighting
+                  </Link>
+                ) : null}
+                <Link
+                  to="/stamps"
+                  className="btn btn-lg"
+                  style={{ color: "var(--board-ink)", border: "1px solid #ffffff2e" }}
+                >
+                  Your stamp book
+                </Link>
+              </div>
+
+              <div className="mt-10 flex flex-wrap gap-8">
+                {[
+                  { label: "Sightings", value: totalReports, accent: "var(--sodium)" },
+                  { label: "Airport lots", value: airportsCovered },
+                  { label: "Regions", value: regionsCovered },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <p className="stencil" style={{ color: "#8d8a80" }}>
+                      {item.label}
+                    </p>
+                    <p className="odo mt-1 text-3xl" style={{ color: item.accent ?? "var(--board-ink)" }}>
+                      <CountUp value={item.value} />
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {error ? <ErrorState title="Could not load the register" message={error} /> : null}
+
+      {!isSupabaseConfigured ? (
+        <Callout tone="gold" title="Preview mode">
+          Supabase isn&apos;t configured, so the board is showing fallback airport regions.
+        </Callout>
+      ) : null}
+
+      {/* ============================= 2 · SEARCH ========================= */}
+      <Reveal as="section" className="space-y-5">
+        <SectionHeader
+          eyebrow="Find a car"
+          title="Search the register"
+          description="Everything below responds to these filters."
+        />
+        <FilterBar
+          filters={filters}
+          airports={filterOptions.airports}
+          companies={filterOptions.companies}
+          regions={filterOptions.regions}
+          makes={filterOptions.makes}
+          models={filterOptions.models}
+          onChange={setFilters}
+          resultCount={isSearching ? searchTotal : undefined}
+          onSubmit={() =>
+            document
+              .getElementById(isSearching ? "results" : "board")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
+        />
+
+        {/* Results get their own board. They used to be folded into "recent
+            sightings", which made it impossible to tell a search result from
+            the default feed. */}
+        {isSearching ? (
+          <div id="results" className="scroll-mt-24">
+            {searchError ? <ErrorState title="Search failed" message={searchError} /> : null}
+
+            <Board
+              title="Search results"
+              subtitle={describeSearch(filters, selectedRegion)}
+              actions={
+                <div className="flex items-center gap-2">
+                  <span className="mono text-[11px] board-dim">
+                    {searching ? "Searching…" : `${searchTotal} match${searchTotal === 1 ? "" : "es"}`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilters(emptyReportFilters);
+                      setSelectedRegion(null);
+                    }}
+                    className="mono text-[11px] underline"
+                    style={{ color: "var(--sodium)" }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              }
+            >
+              <BoardHeaderRow
+                columns={["Airport", "Vehicle", "Company", "Odometer", "Condition", "Seen"]}
+                hideBelowMd={["Company", "Odometer", "Seen"]}
+              />
+              {searching ? (
+                <div className="px-5 py-8">
+                  <p className="mono text-sm board-dim">Searching the register…</p>
+                </div>
+              ) : searchResults.length ? (
+                <div className="flip-stagger">
+                  {searchResults.map((report, index) => (
+                    <BoardRow
+                      key={`${report.airport_code}-${report.model}-${report.observed_date}-${index}`}
+                      report={report}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="px-5 py-10 text-center">
+                  <p className="sign text-lg" style={{ color: "var(--board-ink)" }}>
+                    Nothing matches
+                  </p>
+                  <p className="mono mt-1 text-xs board-dim">
+                    Try a broader airport, company or date range.
+                  </p>
+                </div>
+              )}
+            </Board>
           </div>
         ) : null}
-      </section>
+      </Reveal>
 
-      <p
-        className={`rounded-xl border px-4 py-2.5 text-xs leading-5 sm:text-sm ${
-          isDark ? "border-white/10 bg-white/[0.04] text-slate-300" : "border-slate-200 bg-slate-50 text-slate-600"
-        }`}
-      >
-        Public browsing is open to everyone. There's no public sign-up yet — report submission is limited
-        to manually assigned tester accounts while the project is still taking shape.
-      </p>
-
-      <FilterBar
-        filters={filters}
-        airports={filterOptions.airports}
-        companies={filterOptions.companies}
-        regions={filterOptions.regions}
-        makes={filterOptions.makes}
-        models={filterOptions.models}
-        onChange={setFilters}
-        theme={theme}
-      />
-
-      <NorthAmericaRegionMap
-        airports={airportStats}
-        regions={regionStats}
-        selectedRegion={selectedRegion}
-        onSelectRegion={setSelectedRegion}
-        allRegionsTotals={{
-          reportCount: totalReports,
-          airportCount: airportsCovered,
-          rentalCompanyCount: companyCount,
-          latestReportDate: newestReport?.observed_date ?? null,
-        }}
-        theme={theme}
-      />
-
-      {error ? <ErrorState message={error} tone={theme} /> : null}
-
-      <section className="space-y-4">
-        <div>
-          <h2 className={`text-2xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
-            Airport lot pulse
-          </h2>
-          <p className={`mt-1 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-            A quick read on what's being spotted right now.
-          </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* =========================== 3 · TELEMETRY ======================== */}
+      <Reveal as="section" className="space-y-5">
+        <SectionHeader title="Fleet telemetry" eyebrow="Readouts" />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="Total reports"
+            label="Total sightings"
             value={formatNumber(totalReports)}
-            icon={<ClipboardList className="h-5 w-5" aria-hidden="true" />}
-            tone="indigo"
-            theme={theme}
+            icon={<ClipboardList className="h-5 w-5" />}
+            tone="sky"
           />
           <StatCard
-            label="Airport lots covered"
+            label="Airport lots"
             value={formatNumber(airportsCovered)}
-            icon={<MapPin className="h-5 w-5" aria-hidden="true" />}
-            tone="sky"
-            theme={theme}
+            icon={<MapPin className="h-5 w-5" />}
+            tone="terra"
           />
           <StatCard
-            label="Rental companies covered"
+            label="Companies"
             value={formatNumber(companyCount)}
-            icon={<Building2 className="h-5 w-5" aria-hidden="true" />}
-            tone="violet"
-            theme={theme}
+            icon={<Building2 className="h-5 w-5" />}
+            tone="lavender"
           />
           <StatCard
-            label="Regions reporting (US + Canada)"
-            value={formatNumber(usRegionsCovered + canadaRegionsCovered)}
-            icon={<Map className="h-5 w-5" aria-hidden="true" />}
-            tone="rose"
-            theme={theme}
+            label="Regions live"
+            value={formatNumber(regionsCovered)}
+            icon={<MapPin className="h-5 w-5" />}
+            tone="mint"
           />
           <StatCard
-            label="Most spotted make"
-            value={mostReportedMake ?? "Not enough data yet"}
-            icon={<Trophy className="h-5 w-5" aria-hidden="true" />}
-            tone="amber"
-            theme={theme}
+            label="Most spotted"
+            value={mostReportedMake ?? "—"}
+            sublabel={mostReportedMake ? "make" : "No data"}
+            icon={<Trophy className="h-5 w-5" />}
+            tone="gold"
           />
           <StatCard
-            label="Newest car"
-            value={newestCar ? `${newestCar.year} ${newestCar.make} ${newestCar.model}` : "Not enough data yet"}
-            icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
-            tone="teal"
-            theme={theme}
+            label="Newest"
+            value={newestCar ? String(newestCar.year) : "—"}
+            sublabel={newestCar ? `${newestCar.make} ${newestCar.model}` : "No data"}
+            icon={<Gauge className="h-5 w-5" />}
+            tone="mint"
           />
           <StatCard
-            label="Most active airport"
-            value={
-              mostActiveAirport
-                ? `${mostActiveAirport.iata_code} · ${formatNumber(mostActiveAirport.report_count)} reports`
-                : "Not enough data yet"
+            label="Busiest lot"
+            value={mostActiveAirport ? mostActiveAirport.iata_code : "—"}
+            sublabel={
+              mostActiveAirport ? `${formatNumber(mostActiveAirport.report_count)} sightings` : "No data"
             }
-            icon={<MapPin className="h-5 w-5" aria-hidden="true" />}
+            icon={<MapPin className="h-5 w-5" />}
             tone="sky"
-            theme={theme}
           />
           <StatCard
-            label="Oldest car"
-            value={oldestCar ? `${oldestCar.year} ${oldestCar.make} ${oldestCar.model}` : "Not enough data yet"}
-            icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
-            tone="indigo"
-            theme={theme}
+            label="Oldest"
+            value={oldestCar ? String(oldestCar.year) : "—"}
+            sublabel={oldestCar ? `${oldestCar.make} ${oldestCar.model}` : "No data"}
+            icon={<TrendingDown className="h-5 w-5" />}
+            tone="terra"
           />
         </div>
-      </section>
+      </Reveal>
 
-      <section id="reports" className="space-y-4 scroll-mt-24">
-        <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-          <div>
-            <h2 className={`text-2xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
-              What people are spotting
-            </h2>
-            <p className={`mt-1 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-              Recent sightings from the lot. Reporter identities are never shown publicly.
-              {selectedRegion ? ` Filtered to ${selectedRegion.regionName}.` : ""}
-            </p>
-          </div>
-          <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{filteredReports.length} visible</p>
-        </div>
-        {loading ? (
-          <LoadingState label="Loading public reports" tone={theme} />
-        ) : recentReports.length && filteredReports.length ? (
-          <AutoScrollFeed reports={filteredReports} theme={theme} />
-        ) : selectedRegion ? (
-          <EmptyState
-            title={`No reports for ${selectedRegion.regionName}`}
-            message="No rental car reports yet for this region."
-            tone={theme}
+      {/* ============================== 4 · MAP =========================== */}
+      <Reveal as="section" className="space-y-5">
+        <SectionHeader
+          title="Gate map"
+          eyebrow="Where the fleet sits"
+          description="Select a region to filter the board below."
+          action={
+            selectedRegion ? (
+              <Button size="sm" variant="secondary" onClick={() => setSelectedRegion(null)}>
+                Clear {selectedRegion.regionName}
+              </Button>
+            ) : null
+          }
+        />
+        <NorthAmericaRegionMap
+          airports={airportStats}
+          regions={regionStats}
+          selectedRegion={selectedRegion}
+          onSelectRegion={setSelectedRegion}
+          allRegionsTotals={{
+            reportCount: totalReports,
+            airportCount: airportsCovered,
+            rentalCompanyCount: companyCount,
+            latestReportDate: newestReport?.observed_date ?? null,
+          }}
+        />
+      </Reveal>
+
+      {/* ========================== 5 · THE BOARD ========================= */}
+      <Reveal as="section" className="scroll-mt-24 space-y-5">
+        <div id="board" />
+        <Board
+          title="Recent sightings"
+          subtitle={
+            selectedRegion
+              ? `Filtered to ${selectedRegion.regionName}`
+              : "Newest first · reporter identities never shown"
+          }
+          live
+          actions={
+            <span className="mono text-[11px] board-dim">
+              {filteredReports.length} shown
+            </span>
+          }
+        >
+          <BoardHeaderRow
+            columns={["Airport", "Vehicle", "Company", "Odometer", "Condition", "Seen"]}
+            hideBelowMd={["Company", "Odometer", "Seen"]}
           />
-        ) : (
-          <EmptyState
-            title="No public reports yet"
-            message="Once trusted users submit observations, this feed will start filling in."
-            tone={theme}
-          />
-        )}
-      </section>
+
+          {loading ? (
+            <div className="px-5 py-8">
+              <p className="mono text-sm board-dim">Loading register…</p>
+            </div>
+          ) : visibleRows.length ? (
+            <div className="flip-stagger">
+              {visibleRows.map((report, index) => (
+                <BoardRow
+                  key={`${report.airport_code}-${report.model}-${report.observed_date}-${index}`}
+                  report={report}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="px-5 py-10 text-center">
+              <p className="sign text-lg" style={{ color: "var(--board-ink)" }}>
+                No sightings match
+              </p>
+              <p className="mono mt-1 text-xs board-dim">
+                {recentReports.length ? "Try loosening the filters." : "Nothing logged yet."}
+              </p>
+            </div>
+          )}
+
+          {filteredReports.length > 12 ? (
+            <button
+              type="button"
+              onClick={() => setShowAll((value) => !value)}
+              className="mono w-full py-3 text-[11px] font-bold uppercase tracking-[0.16em] transition-colors"
+              style={{ color: "var(--sodium)", background: "#0b0d10" }}
+            >
+              {showAll ? "Collapse" : `Show all ${filteredReports.length}`}
+            </button>
+          ) : null}
+        </Board>
+      </Reveal>
     </div>
   );
 }
 
-const FEED_ROW_HEIGHT = 76;
-const FEED_VISIBLE_ROWS = 5;
+function stampTone(condition: string) {
+  switch (condition) {
+    case "excellent":
+      return "go" as const;
+    case "good":
+      return "go" as const;
+    case "fair":
+      return "sodium" as const;
+    default:
+      return "stop" as const;
+  }
+}
 
-function AutoScrollFeed({ reports, theme = "light" }: { reports: PublicRecentReport[]; theme?: "light" | "dark" }) {
-  const isDark = theme === "dark";
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pausedRef = useRef(false);
-
-  useEffect(() => {
-    const node = containerRef.current;
-    if (!node || reports.length <= FEED_VISIBLE_ROWS) return;
-
-    let frame: number;
-    const tick = () => {
-      if (!pausedRef.current) {
-        node.scrollTop += 0.4;
-        const loopPoint = node.scrollHeight / 2;
-        if (node.scrollTop >= loopPoint) {
-          node.scrollTop -= loopPoint;
-        }
-      }
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [reports.length]);
-
-  const loopedReports = reports.length > FEED_VISIBLE_ROWS ? [...reports, ...reports] : reports;
-
+/** One row of the arrivals board. Shared so search results and the recent
+ *  feed are rendered identically. */
+function BoardRow({ report }: { report: PublicRecentReport }) {
   return (
-    <div
-      ref={containerRef}
-      onMouseEnter={() => (pausedRef.current = true)}
-      onMouseLeave={() => (pausedRef.current = false)}
-      className={
-        isDark
-          ? "glass-panel overflow-y-hidden"
-          : "overflow-y-hidden rounded-2xl border border-slate-200 bg-white shadow-panel"
-      }
-      style={{ height: FEED_ROW_HEIGHT * FEED_VISIBLE_ROWS }}
-    >
-      <ul className={isDark ? "divide-y divide-white/10" : "divide-y divide-slate-100"}>
-        {loopedReports.map((report, index) => (
-          <li
-            key={`${report.airport_code}-${report.model}-${report.observed_date}-${index}`}
-            className="flex items-start gap-3 px-4 py-3 sm:px-5"
-            style={{ height: FEED_ROW_HEIGHT }}
-          >
-            <div className="flex h-5 w-28 shrink-0 items-center justify-start overflow-visible">
-              <CarMakeBadge make={report.make} size="sm" theme={theme} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className={`truncate text-sm font-semibold leading-5 ${isDark ? "text-white" : "text-slate-950"}`}>
-                {report.year ? `${report.year} ` : ""}
-                {report.make} {report.model}
-              </p>
-              <p className={`truncate text-xs leading-5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                {report.rental_company_name} at {report.airport_code}
-              </p>
-            </div>
-            <div className={`hidden text-right text-xs leading-5 sm:block ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-              <p className="leading-5">{formatMileage(report.mileage)}</p>
-              <p className="leading-5">{formatDate(report.observed_date)}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
+    <div className="board-row board-grid py-2.5">
+      <Flaps text={report.airport_code} size="sm" />
+
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold" style={{ color: "var(--board-ink)" }}>
+          {report.year ? `${report.year} ` : ""}
+          {report.make} {report.model}
+        </p>
+        {report.license_plate ? (
+          <p className="mono text-[10px] board-dim">
+            {report.license_plate_state ? `${report.license_plate_state} ` : ""}
+            {report.license_plate}
+          </p>
+        ) : null}
+      </div>
+
+      <p className="mono hidden truncate text-xs board-dim md:block">{report.rental_company_name}</p>
+
+      <p className="mono hidden text-xs board-amber md:block">
+        {report.mileage != null ? formatMileage(report.mileage) : "\u2014"}
+      </p>
+
+      <div>
+        <Stamp tone={stampTone(report.exterior_condition)}>{report.exterior_condition}</Stamp>
+      </div>
+
+      <p className="mono hidden text-[11px] board-dim md:block">{formatDate(report.observed_date)}</p>
     </div>
   );
+}
+
+/** Human-readable summary of what is being searched. */
+function describeSearch(
+  filters: ReportFilters,
+  region: SelectedRegion | null,
+): string {
+  const parts: string[] = [];
+  if (filters.airportQuery.trim()) parts.push(`airport "${filters.airportQuery.trim()}"`);
+  if (filters.companyQuery.trim()) parts.push(`company "${filters.companyQuery.trim()}"`);
+  if (filters.licensePlateQuery.trim()) parts.push(`plate "${filters.licensePlateQuery.trim()}"`);
+  if (filters.make) parts.push(filters.make);
+  if (filters.model) parts.push(filters.model);
+  if (filters.condition) parts.push(`${filters.condition} condition`);
+  if (region) parts.push(region.regionName);
+  else if (filters.region) parts.push(filters.region.split("-")[1] ?? filters.region);
+  if (filters.country) parts.push(filters.country === "CA" ? "Canada" : "US");
+
+  return parts.length ? `Searching ${parts.join(" · ")}` : "Searching the whole register";
+}
+
+/**
+ * The airport datalist inserts "LAS - Las Vegas". Searching for that whole
+ * string against an IATA code matches nothing, which is why picking an
+ * airport from the list returned no results. Strip it back to the code.
+ */
+function normalizeAirportQuery(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const codeFirst = trimmed.match(/^([A-Za-z]{3,4})\s*[-–—]\s*/);
+  if (codeFirst) return codeFirst[1].toUpperCase();
+
+  return trimmed;
 }
 
 function unique(values: string[]) {

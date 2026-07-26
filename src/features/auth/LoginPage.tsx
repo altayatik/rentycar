@@ -1,43 +1,41 @@
-import { ArrowLeft, LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { ErrorState } from "../../components/ErrorState";
-import { useAuth } from "./authStore";
+import { Button, Callout, ErrorState, Field, TextInput } from "../../components/ui";
 import { isSupabaseConfigured, supabaseConfigError } from "../../lib/supabase";
 import { loginSchema } from "../../lib/validators";
-import logo from "../../assets/logo.png";
-import { useTheme } from "../theme/themeStore";
+import { AuthLayout } from "./AuthLayout";
+import { NeedsEmailLoginError, useAuth } from "./authStore";
 
-type LoginErrors = Partial<Record<"username" | "password", string>>;
+type LoginErrors = Partial<Record<"identifier" | "password", string>>;
 
 export function LoginPage() {
   const { user, signIn } = useAuth();
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
   const navigate = useNavigate();
   const location = useLocation();
-  const [username, setUsername] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<LoginErrors>({});
   const [formError, setFormError] = useState("");
+  const [needsEmail, setNeedsEmail] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/dashboard";
 
-  if (user) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  if (user) return <Navigate to="/dashboard" replace />;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setFormError("");
+    setNeedsEmail(false);
     setErrors({});
 
-    const result = loginSchema.safeParse({ username, password });
+    const result = loginSchema.safeParse({ identifier, password });
     if (!result.success) {
       const fieldErrors = result.error.flatten().fieldErrors;
       setErrors({
-        username: fieldErrors.username?.[0],
+        identifier: fieldErrors.identifier?.[0],
         password: fieldErrors.password?.[0],
       });
       return;
@@ -45,114 +43,107 @@ export function LoginPage() {
 
     setSubmitting(true);
     try {
-      await signIn(result.data.username, result.data.password);
+      await signIn(result.data.identifier, result.data.password);
       navigate(from, { replace: true });
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Unable to sign in.");
+      if (error instanceof NeedsEmailLoginError) {
+        setNeedsEmail(true);
+      } else {
+        setFormError(error instanceof Error ? error.message : "Unable to sign in.");
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div
-      className={`flex min-h-screen items-center justify-center px-4 py-10 ${
-        isDark ? "night-shell" : "bg-slate-50"
-      }`}
-    >
-      <div className="w-full max-w-md">
-        <Link
-          to="/"
-          className={`mb-6 inline-flex items-center gap-1.5 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
-            isDark
-              ? "text-slate-400 hover:text-teal-300 focus-visible:outline-teal-400"
-              : "text-slate-500 hover:text-indigo-700 focus-visible:outline-indigo-700"
-          }`}
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to RentyCar
-        </Link>
-
-        <Link
-          to="/"
-          className={`mb-8 flex items-center justify-center gap-2.5 text-xl font-bold ${
-            isDark ? "font-display text-white" : "text-slate-950"
-          }`}
-        >
-          <img
-            src={logo}
-            alt="RentyCar"
-            className={`h-12 w-12 rounded-2xl ${isDark ? "shadow-glass" : "shadow-md"}`}
-          />
-          RentyCar
-        </Link>
-
-        <form className={isDark ? "glass-panel space-y-6 p-6 sm:p-8" : "panel space-y-6 p-6 sm:p-8"} onSubmit={handleSubmit}>
-          <div className="text-center">
-            <h1 className={`text-2xl font-semibold ${isDark ? "font-display text-white" : "text-slate-950"}`}>
-              Sign in
-            </h1>
-            <p className={`mt-2 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-              Use your RentyCar account, or create one with an invite code.
-            </p>
-          </div>
-
-          {!isSupabaseConfigured ? (
-            <ErrorState title="Supabase is not configured" message={supabaseConfigError} tone={isDark ? "dark" : "light"} />
-          ) : null}
-
-          {formError ? <ErrorState title="Login failed" message={formError} tone={isDark ? "dark" : "light"} /> : null}
-
-          <label className="block space-y-1.5">
-            <span className={isDark ? "glass-label" : "label"}>Username</span>
-            <input
-              className={isDark ? "glass-input" : "input"}
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              autoComplete="username"
-            />
-            {errors.username ? <span className="text-xs text-red-400">{errors.username}</span> : null}
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className={isDark ? "glass-label" : "label"}>Password</span>
-            <input
-              className={isDark ? "glass-input" : "input"}
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-            />
-            {errors.password ? <span className="text-xs text-red-400">{errors.password}</span> : null}
-          </label>
-
-          <button
-            className={`${
-              isDark ? "glass-button-primary" : "button-primary"
-            } w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
-              isDark ? "focus-visible:outline-teal-400" : "focus-visible:outline-indigo-700"
-            }`}
-            type="submit"
-            disabled={submitting}
-          >
-            <LogIn className="h-4 w-4" aria-hidden="true" />
-            {submitting ? "Signing in" : "Sign in"}
-          </button>
-        </form>
-        <p className={`mt-6 text-center text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-          Have an invite code?{" "}
-          <Link
-            to="/signup"
-            className={`font-semibold ${isDark ? "text-teal-300 hover:text-teal-200" : "text-indigo-700 hover:text-indigo-800"}`}
-          >
-            Create an account
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Sign in to log sightings and collect airport stamps."
+      footer={
+        <p className="muted">
+          New here?{" "}
+          <Link to="/signup" className="font-bold" style={{ color: "var(--sky)" }}>
+            Create a free account
           </Link>
         </p>
-        <p className={`mt-4 text-center text-xs leading-5 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-          RentyCar is independent and not affiliated with rental car companies, airports, automakers,
-          or travel providers.
-        </p>
-      </div>
-    </div>
+      }
+    >
+      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+        {!isSupabaseConfigured ? (
+          <ErrorState title="Supabase is not configured" message={supabaseConfigError} />
+        ) : null}
+
+        {formError ? <ErrorState title="Sign-in failed" message={formError} /> : null}
+
+        {needsEmail ? (
+          <Callout tone="sky" title="Use your email address">
+            This account was created with an email, so sign in with the email instead of the username.
+          </Callout>
+        ) : null}
+
+        <Field label="Username or email" error={errors.identifier}>
+          {(id) => (
+            <TextInput
+              id={id}
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
+              autoComplete="username"
+              autoCorrect="off"
+              autoCapitalize="off"
+              placeholder="yourname"
+              invalid={Boolean(errors.identifier)}
+              required
+            />
+          )}
+        </Field>
+
+        <Field label="Password" error={errors.password}>
+          {(id) => (
+            <div className="relative">
+              <TextInput
+                id={id}
+                type={showPassword ? "text" : "password"}
+                className="pr-11"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                invalid={Boolean(errors.password)}
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full p-2 transition-colors hover:bg-[#4a382214]"
+                onClick={() => setShowPassword((value) => !value)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-ink-3" />
+                ) : (
+                  <Eye className="h-4 w-4 text-ink-3" />
+                )}
+              </button>
+            </div>
+          )}
+        </Field>
+
+        <div className="flex justify-end">
+          <Link to="/forgot-password" className="hint font-semibold hover:text-ink">
+            Forgot your password?
+          </Link>
+        </div>
+
+        <Button
+          type="submit"
+          variant="primary"
+          className="w-full"
+          loading={submitting}
+          icon={<LogIn className="h-4 w-4" />}
+          sheen
+        >
+          {submitting ? "Signing in" : "Sign in"}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

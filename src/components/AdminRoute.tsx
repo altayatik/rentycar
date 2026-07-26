@@ -1,22 +1,20 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../features/auth/authStore";
-import { LoadingState } from "./LoadingState";
-import { ProtectedRoute } from "./ProtectedRoute";
+import { BootScreen, ProtectedRoute } from "./ProtectedRoute";
+import { LoadingState } from "./ui";
 
-interface AdminRouteProps {
-  children: ReactNode;
-}
-
-export function AdminRoute({ children }: AdminRouteProps) {
+export function AdminRoute({ children }: { children: ReactNode }) {
   const { profile, loading } = useAuth();
 
   return (
     <ProtectedRoute>
-      {loading ? (
-        <LoadingState label="Checking admin access" />
-      ) : profile?.role === "admin" ? (
-        children
+      {loading || !profile ? (
+        <BootScreen>
+          <LoadingState label="Checking admin access" rows={2} />
+        </BootScreen>
+      ) : profile.role === "admin" ? (
+        <>{children}</>
       ) : (
         <Navigate to="/dashboard" replace />
       )}

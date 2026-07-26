@@ -18,7 +18,11 @@ export const supabase = isSupabaseConfigured
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: false,
+        // MUST stay true. Supabase puts the recovery token in the URL
+        // fragment of the emailed link; with this off the client never
+        // exchanges it for a session, so /reset-password sat waiting
+        // forever and password reset appeared to do nothing.
+        detectSessionInUrl: true,
       },
     })
   : null;

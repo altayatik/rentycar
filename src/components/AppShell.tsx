@@ -1,18 +1,21 @@
 import type { ReactNode } from "react";
-import { useTheme } from "../features/theme/themeStore";
+import { BackgroundArt } from "./BackgroundArt";
 import { Footer } from "./Footer";
 import { Navbar } from "./Navbar";
+import { cx } from "./ui";
 
 interface AppShellProps {
   children: ReactNode;
+  /** Full-bleed pages (the map home page) skip the centred content gutter. */
+  wide?: boolean;
 }
 
-export function AppShell({ children }: AppShellProps) {
-  const { theme } = useTheme();
+export function AppShell({ children, wide = false }: AppShellProps) {
   return (
-    <div className={`flex min-h-screen flex-col ${theme === "dark" ? "night-shell" : "bg-slate-50"}`}>
+    <div className="relative flex min-h-screen flex-col">
+      <BackgroundArt />
       <Navbar />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+      <main className={cx("flex-1 pb-16 pt-8", wide ? "w-full" : "shell")}>{children}</main>
       <Footer />
     </div>
   );

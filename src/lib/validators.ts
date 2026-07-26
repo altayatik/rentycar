@@ -36,11 +36,14 @@ const optionalEnum = <T extends readonly [string, ...string[]]>(values: T) =>
   );
 
 export const loginSchema = z.object({
-  username: z
+  identifier: z
     .string()
     .trim()
-    .min(2, "Username is required")
-    .regex(/^[a-zA-Z0-9_-]+(@rentycar\.local)?$/, "Use your username or username@rentycar.local"),
+    .min(2, "Enter your username or email")
+    .refine(
+      (value) => /^[a-zA-Z0-9_-]+(@rentycar\.local)?$/.test(value) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+      "Enter a valid username or email address",
+    ),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -81,8 +84,30 @@ export const signupSchema = z.object({
     .regex(/^[a-z0-9_-]{3,32}$/, "Username is 3-32 characters: letters, numbers, underscores, or dashes"),
   nickname: z.string().trim().min(2, "Nickname is 2-40 characters").max(40, "Nickname is 2-40 characters"),
   password: z.string().min(8, "Password is at least 8 characters"),
-  inviteCode: z.string().trim().min(1, "Invite code is required"),
+  // Both optional now: signup is open, and email is only for recovery.
+  email: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.string().trim().toLowerCase().email("Enter a valid email address").optional(),
+  ),
+  inviteCode: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.string().trim().toUpperCase().optional(),
+  ),
 });
+
+export const resetRequestSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter the email address on your account"),
+});
+
+export const newPasswordSchema = z
+  .object({
+    password: z.string().min(8, "Password is at least 8 characters"),
+    confirm: z.string(),
+  })
+  .refine((values) => values.password === values.confirm, {
+    message: "Passwords do not match",
+    path: ["confirm"],
+  });
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
 export type ReportFormValues = z.infer<typeof reportSchema>;

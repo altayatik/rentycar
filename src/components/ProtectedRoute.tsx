@@ -2,33 +2,26 @@ import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../features/auth/authStore";
 import { isSupabaseConfigured, supabaseConfigError } from "../lib/supabase";
-import { ErrorState } from "./ErrorState";
-import { LoadingState } from "./LoadingState";
+import { BackgroundArt } from "./BackgroundArt";
+import { ErrorState, LoadingState } from "./ui";
 
-interface ProtectedRouteProps {
-  children: ReactNode;
-}
-
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
+export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
   if (!isSupabaseConfigured) {
     return (
-      <div className="min-h-screen bg-slate-50 p-6">
-        <ErrorState
-          title="Supabase is not configured"
-          message={supabaseConfigError}
-        />
-      </div>
+      <BootScreen>
+        <ErrorState title="Supabase is not configured" message={supabaseConfigError} />
+      </BootScreen>
     );
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 p-6">
-        <LoadingState label="Checking session" />
-      </div>
+      <BootScreen>
+        <LoadingState label="Checking your session" rows={2} />
+      </BootScreen>
     );
   }
 
@@ -37,4 +30,13 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   return <>{children}</>;
+}
+
+export function BootScreen({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative flex min-h-screen items-center justify-center p-6">
+      <BackgroundArt />
+      <div className="w-full max-w-md">{children}</div>
+    </div>
+  );
 }

@@ -1,47 +1,25 @@
 type CarMakeBadgeProps = {
   make: string;
   size?: "sm" | "md" | "lg";
-  theme?: "light" | "dark";
 };
 
 // Plain text badges only — no third-party logo assets. Brand names are
 // shown as plain text for identification purposes; RentyCar is not
-// affiliated with any of these companies. The text color is generated
+// affiliated with any of these companies. The colour is derived
 // deterministically from the brand name so the same make always renders
 // the same way, without reproducing any real manufacturer emblem.
-const textColorsLight = [
-  "text-indigo-700",
-  "text-sky-700",
-  "text-rose-700",
-  "text-amber-700",
-  "text-violet-700",
-  "text-emerald-700",
-  "text-cyan-700",
-  "text-fuchsia-700",
-  "text-blue-700",
-  "text-orange-700",
-  "text-slate-700",
-  "text-pink-700",
-];
-
-const textColorsDark = [
-  "text-indigo-300",
-  "text-sky-300",
-  "text-rose-300",
-  "text-amber-300",
-  "text-violet-300",
-  "text-emerald-300",
-  "text-cyan-300",
-  "text-fuchsia-300",
-  "text-blue-300",
-  "text-orange-300",
-  "text-slate-300",
-  "text-pink-300",
+const palette = [
+  { fg: "#1f5f8a", bg: "var(--sky-tint)" },
+  { fg: "var(--forest)", bg: "var(--mint-tint)" },
+  { fg: "#8a6511", bg: "var(--gold-tint)" },
+  { fg: "#9a5333", bg: "var(--terracotta-tint)" },
+  { fg: "#5a4da3", bg: "var(--lavender-tint)" },
+  { fg: "#8f3d35", bg: "var(--danger-tint)" },
 ];
 
 const sizeClasses: Record<NonNullable<CarMakeBadgeProps["size"]>, string> = {
-  sm: "px-2.5 py-1 text-xs",
-  md: "px-3 py-1.5 text-sm",
+  sm: "px-2.5 py-1 text-[11px]",
+  md: "px-3 py-1.5 text-xs",
   lg: "px-3.5 py-1.5 text-sm",
 };
 
@@ -54,20 +32,16 @@ function hashString(value: string) {
   return Math.abs(hash);
 }
 
-export function CarMakeBadge({ make, size = "md", theme = "light" }: CarMakeBadgeProps) {
-  const hash = hashString(make);
-  const isDark = theme === "dark";
-  const textColors = isDark ? textColorsDark : textColorsLight;
-  const color = textColors[hash % textColors.length];
+export function CarMakeBadge({ make, size = "md" }: CarMakeBadgeProps) {
+  const tone = palette[hashString(make) % palette.length];
 
   return (
     <span
       role="img"
       aria-label={make}
       title={make}
-      className={`inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full border font-bold uppercase tracking-tight ${
-        isDark ? "border-white/15 bg-white/[0.06]" : "border-slate-200 bg-white shadow-sm"
-      } ${color} ${sizeClasses[size]}`}
+      className={`inline-flex max-w-full shrink-0 items-center justify-center truncate whitespace-nowrap rounded-full font-bold uppercase tracking-tight ${sizeClasses[size]}`}
+      style={{ color: tone.fg, background: tone.bg }}
     >
       {make}
     </span>

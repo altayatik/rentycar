@@ -1,9 +1,10 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AdminRoute } from "../components/AdminRoute";
 import { AppShell } from "../components/AppShell";
 import { ProtectedRoute } from "../components/ProtectedRoute";
 import { AdminPage } from "../features/admin/AdminPage";
 import { LoginPage } from "../features/auth/LoginPage";
+import { ForgotPasswordPage, ResetPasswordPage } from "../features/auth/PasswordResetPages";
 import { SignupPage } from "../features/auth/SignupPage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { FriendsPage } from "../features/dashboard/FriendsPage";
@@ -11,42 +12,20 @@ import { StampsPage } from "../features/dashboard/StampsPage";
 import { SubmitReportForm } from "../features/dashboard/SubmitReportForm";
 import { AboutPage } from "../features/public/AboutPage";
 import { HomePage } from "../features/public/HomePage";
-import { LegalPage } from "../features/public/LegalPage";
+import { NotFoundPage } from "../features/public/NotFoundPage";
 
 export const router = createBrowserRouter(
   [
-    {
-      path: "/",
-      element: (
-        <AppShell>
-          <HomePage />
-        </AppShell>
-      ),
-    },
-    {
-      path: "/about",
-      element: (
-        <AppShell>
-          <AboutPage />
-        </AppShell>
-      ),
-    },
-    {
-      path: "/legal",
-      element: (
-        <AppShell>
-          <LegalPage />
-        </AppShell>
-      ),
-    },
-    {
-      path: "/login",
-      element: <LoginPage />,
-    },
-    {
-      path: "/signup",
-      element: <SignupPage />,
-    },
+    { path: "/", element: <AppShell><HomePage /></AppShell> },
+    { path: "/about", element: <AppShell><AboutPage /></AppShell> },
+    // Legal now lives at the bottom of About. Keep the old URL working.
+    { path: "/legal", element: <Navigate to="/about#legal" replace /> },
+
+    { path: "/login", element: <LoginPage /> },
+    { path: "/signup", element: <SignupPage /> },
+    { path: "/forgot-password", element: <ForgotPasswordPage /> },
+    { path: "/reset-password", element: <ResetPasswordPage /> },
+
     {
       path: "/dashboard",
       element: (
@@ -82,7 +61,7 @@ export const router = createBrowserRouter(
       element: (
         <ProtectedRoute>
           <AppShell>
-            <div className="mx-auto max-w-4xl">
+            <div className="mx-auto max-w-3xl">
               <SubmitReportForm />
             </div>
           </AppShell>
@@ -99,6 +78,8 @@ export const router = createBrowserRouter(
         </AdminRoute>
       ),
     },
+
+    { path: "*", element: <AppShell><NotFoundPage /></AppShell> },
   ],
   { basename: "/rentycar" },
 );

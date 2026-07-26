@@ -1,4 +1,5 @@
 export type Role = "admin" | "reporter";
+export type AccountStatus = "pending" | "approved" | "suspended";
 export type Condition = "excellent" | "good" | "fair" | "poor";
 export type CountryCode = "US" | "CA";
 export type RentalCompanyType = "traditional_rental" | "car_sharing" | "peer_to_peer";
@@ -14,7 +15,77 @@ export interface Profile {
   username: string;
   nickname?: string | null;
   role: Role;
+  status: AccountStatus;
+  uses_email_login: boolean;
+  suspended_reason?: string | null;
+  approved_at?: string | null;
   created_at: string;
+}
+
+/** Row shape returned by the admin_list_users() RPC. */
+export interface AdminUserRow {
+  id: string;
+  username: string;
+  nickname: string | null;
+  role: Role;
+  status: AccountStatus;
+  uses_email_login: boolean;
+  has_email: boolean;
+  report_count: number;
+  last_report_at: string | null;
+  created_at: string;
+  approved_at: string | null;
+  last_sign_in_at: string | null;
+}
+
+export interface AdminStats {
+  total_users: number;
+  pending_users: number;
+  suspended_users: number;
+  admin_users: number;
+  total_reports: number;
+  deleted_reports: number;
+  reports_last_7d: number;
+  reports_last_30d: number;
+  signups_last_7d: number;
+  active_airports: number;
+  active_companies: number;
+  unused_invites: number;
+}
+
+export interface AdminActivityRow {
+  day: string;
+  reports: number;
+  signups: number;
+}
+
+export interface AdminReportRow {
+  id: string;
+  reporter_id: string | null;
+  reporter_username: string | null;
+  airport_code: string | null;
+  airport_name: string | null;
+  company_name: string | null;
+  make_name: string | null;
+  model_name: string | null;
+  year: number | null;
+  mileage: number | null;
+  exterior_condition: Condition;
+  interior_condition: Condition;
+  observed_at: string;
+  created_at: string;
+  deleted_at: string | null;
+}
+
+export interface InviteCodeRow {
+  id: string;
+  code: string;
+  label: string | null;
+  created_at: string;
+  expires_at: string | null;
+  used_at: string | null;
+  revoked_at: string | null;
+  used_by_username: string | null;
 }
 
 export type FriendshipStatus = "pending" | "accepted";
