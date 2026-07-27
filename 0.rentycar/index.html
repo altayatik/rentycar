@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Low-bandwidth RentyCar search and reporting.">
+  <meta name="supabase-url" content="%VITE_SUPABASE_URL%">
+  <meta name="supabase-anon-key" content="%VITE_SUPABASE_ANON_KEY%">
+  <meta name="supabase-publishable-key" content="%VITE_SUPABASE_PUBLISHABLE_KEY%">
+  <title>RentyCar 0</title>
+</head>
+<body>
+  <header>
+    <h1>RentyCar 0</h1>
+    <p>Low-bandwidth access. Login, search, and add only.</p>
+    <p><a href="../">Open the full RentyCar site</a></p>
+  </header>
+
+  <noscript>This page needs JavaScript for secure login and Supabase requests.</noscript>
+  <p id="config-error" hidden></p>
+
+  <section id="login-panel">
+    <h2>Sign in</h2>
+    <form id="login-form">
+      <p>
+        <label for="identifier">Username or email</label><br>
+        <input id="identifier" name="identifier" autocomplete="username" required>
+      </p>
+      <p>
+        <label for="login-password">Password</label><br>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+      </p>
+      <button type="submit">Sign in</button>
+    </form>
+    <p id="login-status" role="status"></p>
+  </section>
+
+  <main id="app" hidden>
+    <p>
+      Signed in as <strong id="account-name"></strong>
+      (<span id="account-status"></span>)
+      <button id="logout" type="button">Sign out</button>
+    </p>
+    <nav aria-label="Low-bandwidth tools">
+      <a href="#search">Search</a> |
+      <a href="#add">Add a sighting</a>
+    </nav>
+    <hr>
+
+    <section id="search">
+      <h2>Search sightings</h2>
+      <form id="search-form">
+        <p>
+          <label for="search-airport">Airport or city</label><br>
+          <input id="search-airport" name="airport" placeholder="AUS">
+        </p>
+        <p>
+          <label for="search-company">Rental company</label><br>
+          <input id="search-company" name="company" placeholder="Hertz">
+        </p>
+        <p>
+          <label for="search-plate">License plate</label><br>
+          <input id="search-plate" name="plate">
+        </p>
+        <p>
+          <label for="search-make">Make</label><br>
+          <input id="search-make" name="make" placeholder="Toyota">
+        </p>
+        <p>
+          <label for="search-model">Model</label><br>
+          <input id="search-model" name="model" placeholder="Camry">
+        </p>
+        <p>
+          <label for="search-condition">Condition</label><br>
+          <select id="search-condition" name="condition">
+            <option value="">Any</option>
+            <option value="excellent">Excellent</option>
+            <option value="good">Good</option>
+            <option value="fair">Fair</option>
+            <option value="poor">Poor</option>
+          </select>
+        </p>
+        <button type="submit">Search</button>
+        <button type="reset">Clear</button>
+      </form>
+      <p id="search-status" role="status"></p>
+      <ol id="search-results"></ol>
+    </section>
+
+    <hr>
+
+    <section id="add">
+      <h2>Add a sighting</h2>
+      <p>Enter exact catalogue names. The page downloads only the matching records.</p>
+      <form id="add-form">
+        <p>
+          <label for="add-airport">Airport IATA code</label><br>
+          <input id="add-airport" name="airport" maxlength="3" pattern="[A-Za-z]{3}" placeholder="AUS" required>
+        </p>
+        <p>
+          <label for="add-company">Rental company</label><br>
+          <input id="add-company" name="company" placeholder="Hertz" required>
+        </p>
+        <p>
+          <label for="add-make">Make</label><br>
+          <input id="add-make" name="make" placeholder="Toyota" required>
+        </p>
+        <p>
+          <label for="add-model">Model</label><br>
+          <input id="add-model" name="model" placeholder="Camry" required>
+        </p>
+        <p>
+          <label for="add-year">Year (optional)</label><br>
+          <input id="add-year" name="year" type="number" min="1990" max="2100">
+        </p>
+        <p>
+          <label for="add-mileage">Mileage (optional)</label><br>
+          <input id="add-mileage" name="mileage" type="number" min="0">
+        </p>
+        <p>
+          <label for="add-exterior">Exterior condition</label><br>
+          <select id="add-exterior" name="exterior" required>
+            <option value="excellent">Excellent</option>
+            <option value="good" selected>Good</option>
+            <option value="fair">Fair</option>
+            <option value="poor">Poor</option>
+          </select>
+        </p>
+        <p>
+          <label for="add-interior">Interior condition</label><br>
+          <select id="add-interior" name="interior" required>
+            <option value="excellent">Excellent</option>
+            <option value="good" selected>Good</option>
+            <option value="fair">Fair</option>
+            <option value="poor">Poor</option>
+          </select>
+        </p>
+        <p>
+          <label for="add-plate">License plate (optional)</label><br>
+          <input id="add-plate" name="plate">
+        </p>
+        <p>
+          <label for="add-plate-state">Plate state or province (optional)</label><br>
+          <input id="add-plate-state" name="plateState" maxlength="3">
+        </p>
+        <p>
+          <label for="add-date">Observed date</label><br>
+          <input id="add-date" name="date" type="date" required>
+        </p>
+        <button type="submit">Add sighting</button>
+      </form>
+      <p id="add-status" role="status"></p>
+    </section>
+  </main>
+
+  <script>
+  (() => {
+    "use strict";
+
+    const meta = (name) => document.querySelector(`meta[name="${name}"]`)?.content.trim() || "";
+    const SUPABASE_URL = meta("supabase-url").replace(/\/$/, "");
+    const SUPABASE_KEY = meta("supabase-anon-key") || meta("supabase-publishable-key");
+    const STORAGE_KEY = "rentycar-zero-session-v1";
+    const $ = (id) => document.getElementById(id);
+    const loginPanel = $("login-panel");
+    const app = $("app");
+    let session = null;
+    let user = null;
+
+    function configured(value) {
+      return value && !value.includes("%VITE_");
+    }
+
+    function message(id, text) {
+      $(id).textContent = text || "";
+    }
+
+    function errorText(data, fallback) {
+      return data?.message || data?.msg || data?.error_description || data?.hint || data?.error || fallback;
+    }
+
+    function saveSession(data) {
+      session = {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    }
+
+    function clearSession() {
+      session = null;
+      user = null;
+      localStorage.removeItem(STORAGE_KEY);
+      app.hidden = true;
+      loginPanel.hidden = false;
+    }
+
+    async function request(path, options = {}) {
+      const headers = {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${options.public ? SUPABASE_KEY : session?.access_token || SUPABASE_KEY}`,
+        ...options.headers,
+      };
+      if (options.body !== undefined) headers["Content-Type"] = "application/json";
+
+      const response = await fetch(SUPABASE_URL + path, {
+        method: options.method || "GET",
+        headers,
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      });
+      const raw = await response.text();
+      let data = null;
+      if (raw) {
+        try { data = JSON.parse(raw); }
+        catch { data = raw; }
+      }
+      if (!response.ok) throw new Error(errorText(data, `Request failed (${response.status})`));
+      return data;
+    }
+
+    async function token(grantType, body) {
+      return request(`/auth/v1/token?grant_type=${grantType}`, {
+        method: "POST",
+        public: true,
+        body,
+      });
+    }
+
+    async function loadAccount() {
+      user = await request("/auth/v1/user");
+      const profiles = await request(
+        `/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=username,nickname,status&limit=1`,
+      );
+      const profile = profiles?.[0];
+      if (!profile) throw new Error("Account profile not found.");
+      $("account-name").textContent = profile.nickname || `@${profile.username}`;
+      $("account-status").textContent = profile.status;
+      loginPanel.hidden = true;
+      app.hidden = false;
+    }
+
+    async function restoreSession() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      try {
+        session = JSON.parse(raw);
+        await loadAccount();
+      } catch {
+        try {
+          const refreshed = await token("refresh_token", { refresh_token: session?.refresh_token });
+          saveSession(refreshed);
+          await loadAccount();
+        } catch {
+          clearSession();
+        }
+      }
+    }
+
+    async function login(identifier, password) {
+      const normalized = identifier.trim().toLowerCase();
+      let email = normalized;
+      if (!normalized.includes("@")) {
+        const result = await request("/rest/v1/rpc/login_kind_for_username", {
+          method: "POST",
+          public: true,
+          body: { target_username: normalized },
+        });
+        const kind = Array.isArray(result) ? result[0]?.kind : result?.kind;
+        if (kind === "email") {
+          throw new Error("This account signs in with its email address.");
+        }
+        email = `${normalized}@rentycar.local`;
+      }
+      const data = await token("password", { email, password });
+      saveSession(data);
+      await loadAccount();
+    }
+
+    function query(path, params) {
+      const search = new URLSearchParams(params);
+      return request(`/rest/v1/${path}?${search}`);
+    }
+
+    async function exactRecord(table, column, value, extra = {}) {
+      const clean = String(value).trim().replace(/[%*,()]/g, "");
+      const params = {
+        select: "id",
+        is_active: "eq.true",
+        [column]: `ilike.${clean}`,
+        limit: "2",
+        ...extra,
+      };
+      const rows = await query(table, params);
+      if (rows.length !== 1) {
+        throw new Error(
+          rows.length ? `${value} is ambiguous. Enter the exact catalogue name.` : `${value} was not found.`,
+        );
+      }
+      return rows[0];
+    }
+
+    function addResult(row) {
+      const item = document.createElement("li");
+      const title = document.createElement("strong");
+      title.textContent = `${row.year || ""} ${row.make || ""} ${row.model || ""}`.trim();
+      const details = document.createElement("span");
+      const mileage = row.mileage == null ? "mileage unknown" : `${Number(row.mileage).toLocaleString()} mi`;
+      const date = row.observed_date ? new Date(row.observed_date).toLocaleDateString() : "date unknown";
+      details.textContent =
+        ` — ${row.airport_code}; ${row.rental_company_name}; ${mileage}; ` +
+        `${row.exterior_condition} exterior; ${date}`;
+      item.append(title, details);
+      $("search-results").append(item);
+    }
+
+    $("login-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      message("login-status", "Signing in...");
+      const formElement = event.currentTarget;
+      const form = new FormData(formElement);
+      try {
+        await login(String(form.get("identifier")), String(form.get("password")));
+        formElement.reset();
+        message("login-status", "");
+      } catch (error) {
+        clearSession();
+        message("login-status", error.message);
+      }
+    });
+
+    $("logout").addEventListener("click", async () => {
+      try { await request("/auth/v1/logout", { method: "POST" }); }
+      catch {}
+      clearSession();
+      message("login-status", "Signed out.");
+    });
+
+    $("search-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      message("search-status", "Searching...");
+      $("search-results").replaceChildren();
+      const form = new FormData(event.currentTarget);
+      const value = (name) => String(form.get(name) || "").trim() || null;
+      try {
+        const rows = await request("/rest/v1/rpc/search_public_reports", {
+          method: "POST",
+          body: {
+            airport_q: value("airport"),
+            company_q: value("company"),
+            plate_q: value("plate"),
+            country_q: null,
+            region_q: null,
+            make_q: value("make"),
+            model_q: value("model"),
+            condition_q: value("condition"),
+            mileage_min: null,
+            mileage_max: null,
+            observed_from: null,
+            observed_to: null,
+            max_rows: 40,
+          },
+        });
+        rows.forEach(addResult);
+        const total = Number(rows[0]?.total_matches || 0);
+        message("search-status", rows.length ? `${total} match${total === 1 ? "" : "es"}; showing ${rows.length}.` : "No matches.");
+      } catch (error) {
+        message("search-status", error.message);
+      }
+    });
+
+    $("add-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      message("add-status", "Checking catalogue and adding...");
+      const formElement = event.currentTarget;
+      const form = new FormData(formElement);
+      const value = (name) => String(form.get(name) || "").trim();
+      try {
+        const airportCode = value("airport").toUpperCase();
+        const [airport, company, make] = await Promise.all([
+          exactRecord("airports", "iata_code", airportCode),
+          exactRecord("rental_companies", "name", value("company")),
+          exactRecord("car_makes", "name", value("make")),
+        ]);
+        const model = await exactRecord("car_models", "name", value("model"), {
+          make_id: `eq.${make.id}`,
+        });
+        const date = value("date");
+        const rows = await request("/rest/v1/vehicle_reports?select=id", {
+          method: "POST",
+          headers: { Prefer: "return=representation" },
+          body: {
+            reporter_id: user.id,
+            airport_id: airport.id,
+            rental_company_id: company.id,
+            make_id: make.id,
+            model_id: model.id,
+            year: value("year") ? Number(value("year")) : null,
+            mileage: value("mileage") ? Number(value("mileage")) : null,
+            exterior_condition: value("exterior"),
+            interior_condition: value("interior"),
+            license_plate: value("plate").toUpperCase() || null,
+            license_plate_state: value("plateState").toUpperCase() || null,
+            observed_at: `${date}T12:00:00.000Z`,
+          },
+        });
+        if (!rows?.length) throw new Error("Nothing was saved. Your account may still be awaiting approval.");
+        formElement.reset();
+        $("add-date").value = new Date().toISOString().slice(0, 10);
+        message("add-status", "Sighting added.");
+      } catch (error) {
+        message("add-status", error.message);
+      }
+    });
+
+    $("search-form").addEventListener("reset", () => {
+      $("search-results").replaceChildren();
+      message("search-status", "");
+    });
+
+    $("add-date").value = new Date().toISOString().slice(0, 10);
+
+    if (!configured(SUPABASE_URL) || !configured(SUPABASE_KEY)) {
+      $("config-error").hidden = false;
+      $("config-error").textContent = "Supabase is not configured for this build.";
+      loginPanel.hidden = true;
+      return;
+    }
+    restoreSession();
+  })();
+  </script>
+</body>
+</html>

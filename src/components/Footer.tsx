@@ -22,6 +22,7 @@ export function Footer() {
         <nav>
           <Link to="/">Explore</Link>
           <Link to="/about">About</Link>
+          <a href="/rentycar/0.rentycar/">Low bandwidth</a>
           <Link to="/about#legal">Legal</Link>
           <a href="mailto:rentycar@altayatik.com">Contact <ArrowUpRight /></a>
         </nav>

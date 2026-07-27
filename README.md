@@ -189,6 +189,22 @@ The initial `index-*.js` chunk should remain substantially smaller than the sum 
 the route chunks. A new large route should be dynamically imported in
 `src/app/router.tsx`.
 
+## Low-bandwidth page
+
+`0.rentycar/index.html` is a standalone fallback for slow or constrained
+connections. It contains no CSS, images, fonts, framework code, or external
+libraries. It authenticates directly against Supabase and exposes only Search and
+Add Sighting.
+
+Vite processes it as a second HTML entry so the existing Supabase environment
+variables are inserted during build:
+
+```text
+development: /0.rentycar/
+deployed from this project: /rentycar/0.rentycar/
+output: dist/0.rentycar/index.html
+```
+
 ### Fixed in migration 0001
 
 - Users could never delete their own reports. The UPDATE policy's `WITH CHECK`
