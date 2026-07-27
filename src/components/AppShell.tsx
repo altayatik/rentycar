@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { useLocation } from "react-router-dom";
+import { useAuth } from "../features/auth/authStore";
 import { BackgroundArt } from "./BackgroundArt";
 import { Footer } from "./Footer";
 import { Navbar } from "./Navbar";
@@ -11,12 +13,20 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, wide = false }: AppShellProps) {
+  const { user } = useAuth();
+  const location = useLocation();
+  const isWorkspace = Boolean(
+    user && ["/dashboard", "/stamps", "/friends", "/account", "/submit", "/admin"].some((path) => location.pathname.startsWith(path)),
+  );
+
   return (
-    <div className="relative flex min-h-screen flex-col">
+    <div className={cx("app-shell", isWorkspace && "app-shell-workspace")}>
       <BackgroundArt />
       <Navbar />
-      <main className={cx("flex-1 pb-16 pt-8", wide ? "w-full" : "shell")}>{children}</main>
-      <Footer />
+      <main className={cx(isWorkspace ? "workspace-main" : "public-main", wide ? "w-full" : "shell")}>
+        {children}
+      </main>
+      {!isWorkspace ? <Footer /> : null}
     </div>
   );
 }

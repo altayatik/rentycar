@@ -3,8 +3,11 @@ import {
   Building2,
   ClipboardList,
   Gauge,
+  KeyRound,
   MapPin,
+  ScanLine,
   PlusCircle,
+  Search,
   TrendingDown,
   Trophy,
 } from "lucide-react";
@@ -17,7 +20,6 @@ import {
   type ReportFilters,
 } from "../../components/FilterBar";
 import { NorthAmericaRegionMap, type SelectedRegion } from "../../components/NorthAmericaRegionMap";
-import { TerminalScene } from "../../components/TerminalScene";
 import {
   Board,
   BoardHeaderRow,
@@ -37,7 +39,42 @@ import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { useAuth } from "../auth/authStore";
 import type { PublicAirportStats, PublicRecentReport, PublicRegionStats } from "../../lib/types";
 
-export function HomePage() {
+function createPublicCoreRequest() {
+  const client = supabase!;
+  return Promise.all([
+    client.from("public_airport_stats").select("*").order("report_count", { ascending: false }),
+    client.from("public_region_stats").select("*").order("report_count", { ascending: false }),
+    client.from("public_recent_reports").select("*").limit(100),
+    client.from("rental_companies").select("name").eq("is_active", true).order("name"),
+  ]);
+}
+
+function createSearchCatalogRequest() {
+  const client = supabase!;
+  return Promise.all([
+    client.from("car_makes").select("name").eq("is_active", true).order("name"),
+    client.from("car_models").select("name").eq("is_active", true).order("name"),
+  ]);
+}
+
+// React Strict Mode mounts effects twice in development, and navigating from
+// Home to Search mounts this route again. Share in-flight/completed requests
+// so those transitions do not repeat the same public reads.
+let publicCorePromise: ReturnType<typeof createPublicCoreRequest> | null = null;
+let searchCatalogPromise: ReturnType<typeof createSearchCatalogRequest> | null = null;
+
+function getPublicCoreData() {
+  publicCorePromise ??= createPublicCoreRequest();
+  return publicCorePromise;
+}
+
+function getSearchCatalog() {
+  searchCatalogPromise ??= createSearchCatalogRequest();
+  return searchCatalogPromise;
+}
+
+export function HomePage({ view = "home" }: { view?: "home" | "search" }) {
+  const isSearchPage = view === "search";
   const { user, profile } = useAuth();
   const [airportStats, setAirportStats] = useState<PublicAirportStats[]>(fallbackAirportStats);
   const [regionStats, setRegionStats] = useState<PublicRegionStats[]>([]);
@@ -63,26 +100,27 @@ export function HomePage() {
       setLoading(false);
       return;
     }
-    const client = supabase;
 
     const loadPublicData = async () => {
       setLoading(true);
-      const [statsResult, regionStatsResult, reportsResult, companiesResult, makesResult, modelsResult] =
-        await Promise.all([
-          client.from("public_airport_stats").select("*").order("report_count", { ascending: false }),
-          client.from("public_region_stats").select("*").order("report_count", { ascending: false }),
-          client.from("public_recent_reports").select("*").limit(100),
-          // Filter dropdowns are built from the catalogue tables, not from
-          // the recent-reports array — that array is capped at 100 rows, so
-          // the menus were missing most makes, models and companies.
-          client.from("rental_companies").select("name").eq("is_active", true).order("name"),
-          client.from("car_makes").select("name").eq("is_active", true).order("name"),
-          client.from("car_models").select("name").eq("is_active", true).order("name"),
-        ]);
+      const [coreResults, searchCatalogResults] = await Promise.all([
+        getPublicCoreData(),
+        isSearchPage ? getSearchCatalog() : Promise.resolve(null),
+      ]);
+      const [statsResult, regionStatsResult, reportsResult, companiesResult] = coreResults;
+      const makesResult = searchCatalogResults?.[0];
+      const modelsResult = searchCatalogResults?.[1];
 
       const loadError =
-        statsResult.error ?? regionStatsResult.error ?? reportsResult.error ?? companiesResult.error;
+        statsResult.error ??
+        regionStatsResult.error ??
+        reportsResult.error ??
+        companiesResult.error ??
+        makesResult?.error ??
+        modelsResult?.error;
       if (loadError) {
+        publicCorePromise = null;
+        if (makesResult?.error || modelsResult?.error) searchCatalogPromise = null;
         const isMissingSchema =
           loadError.code === "PGRST205" || loadError.message.toLowerCase().includes("schema cache");
         setError(
@@ -91,6 +129,7 @@ export function HomePage() {
             : loadError.message,
         );
       } else {
+        setError("");
         const stats = (statsResult.data ?? []) as PublicAirportStats[];
         setAirportStats(stats.length ? stats : fallbackAirportStats);
         setRegionStats((regionStatsResult.data ?? []) as PublicRegionStats[]);
@@ -99,8 +138,8 @@ export function HomePage() {
         const companyNames = ((companiesResult.data ?? []) as Array<{ name: string }>).map((r) => r.name);
         setCatalog({
           companies: companyNames,
-          makes: ((makesResult.data ?? []) as Array<{ name: string }>).map((r) => r.name),
-          models: unique(((modelsResult.data ?? []) as Array<{ name: string }>).map((r) => r.name)),
+          makes: ((makesResult?.data ?? []) as Array<{ name: string }>).map((r) => r.name),
+          models: unique(((modelsResult?.data ?? []) as Array<{ name: string }>).map((r) => r.name)),
         });
         setCompanyCount(companyNames.length);
       }
@@ -108,7 +147,7 @@ export function HomePage() {
     };
 
     void loadPublicData();
-  }, []);
+  }, [isSearchPage]);
 
   // Any filter set, or a region picked on the map, means the visitor is
   // searching rather than browsing.
@@ -294,154 +333,69 @@ export function HomePage() {
   const signedOut = !user;
 
   return (
-    <div className="space-y-14">
-      {/* ============================ 1 · BOARDING ========================= */}
-      {signedOut ? (
-        <section className="animate-rise pt-6">
-          <div
-            className="relative overflow-hidden"
-            style={{
-              borderRadius: "var(--r-md)",
-              borderTop: "3px solid var(--sodium)",
-              boxShadow: "var(--sh-board)",
-              background: "#16181c",
-            }}
-          >
-            {/* Illustrated lot scene */}
-            <div className="absolute inset-0">
-              <TerminalScene className="h-full w-full" />
-              {/* readability scrim, left-weighted */}
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    "linear-gradient(96deg, #121418f2 0%, #12141ae0 38%, #12141a80 62%, transparent 88%)",
-                }}
-              />
-            </div>
-
-            <div className="relative px-6 py-14 sm:px-10 lg:py-20">
-              <p className="stencil" style={{ color: "var(--sodium)" }}>
-                Now boarding · Free to join
-              </p>
-              <h1 className="h-display mt-4 max-w-2xl" style={{ color: "var(--board-ink)" }}>
-                Log what
-                <br />
-                you <span style={{ color: "var(--sodium)" }}>drove</span>
-              </h1>
-              <p
-                className="mt-5 max-w-lg text-base leading-relaxed"
-                style={{ color: "var(--board-ink-2)" }}
-              >
-                RentyCar is a community register of what&apos;s actually sitting on airport rental
-                lots — make, mileage, tyres, dents. Browse it free, or add what you drove.
-              </p>
-
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link to="/signup" className="btn btn-accent btn-lg">
-                  Create account
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
-                <Link
-                  to="/login"
-                  className="btn btn-lg"
-                  style={{ color: "var(--board-ink)", border: "1px solid #ffffff2e" }}
-                >
-                  Sign in
-                </Link>
-              </div>
-
-              {/* live counters */}
-              <div className="mt-10 flex flex-wrap gap-8">
-                {[
-                  { label: "Sightings", value: totalReports, accent: "var(--sodium)" },
-                  { label: "Airport lots", value: airportsCovered },
-                  { label: "Regions", value: regionsCovered },
-                ].map((item) => (
-                  <div key={item.label}>
-                    <p className="stencil" style={{ color: "#8d8a80" }}>
-                      {item.label}
-                    </p>
-                    <p
-                      className="odo mt-1 text-3xl"
-                      style={{ color: item.accent ?? "var(--board-ink)" }}
-                    >
-                      <CountUp value={item.value} />
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+    <div className={isSearchPage ? "search-page-layout search-page-stack" : "space-y-14"}>
+      {isSearchPage ? (
+        <section className="search-page-hero animate-rise">
+          <div>
+            <p className="product-kicker"><Search />Fleet search</p>
+            <h1>Find what&apos;s been leaving the lot.</h1>
           </div>
+          <p>
+            Search the community register by airport, rental company, plate, vehicle, condition,
+            mileage, or date. Reporter identities always stay private.
+          </p>
         </section>
       ) : (
-        /* Signed in: same illustrated stage, different job to do. */
-        <section className="animate-rise pt-6">
-          <div
-            className="relative overflow-hidden"
-            style={{
-              borderRadius: "var(--r-md)",
-              borderTop: "3px solid var(--sodium)",
-              boxShadow: "var(--sh-board)",
-              background: "#16181c",
-            }}
-          >
-            <div className="absolute inset-0">
-              <TerminalScene className="h-full w-full" />
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    "linear-gradient(96deg, #121418f2 0%, #12141ae0 38%, #12141a80 64%, transparent 90%)",
-                }}
-              />
-            </div>
-
-            <div className="relative px-6 py-12 sm:px-10">
-              <p className="stencil" style={{ color: "var(--sodium)" }}>
-                Welcome back, {profile?.nickname || profile?.username}
-              </p>
-              <h1 className="h-display mt-3 max-w-2xl" style={{ color: "var(--board-ink)" }}>
-                What&apos;s on
-                <br />
-                the <span style={{ color: "var(--sodium)" }}>lot</span>
-              </h1>
-
-              <div className="mt-7 flex flex-wrap items-center gap-3">
+      <section className="atlas-hero main-board-hero animate-rise">
+        <div className="atlas-hero-copy">
+          <h1>
+            Rental cars,
+            <span>minus the mystery.</span>
+          </h1>
+          <p>
+            RentyCar maps the actual vehicles leaving airport lots—model, mileage, condition,
+            equipment, and rental desk—so “or similar” feels a little less vague.
+          </p>
+          <div className="atlas-hero-actions">
+            {signedOut ? (
+              <>
+                <Link to="/signup" className="btn btn-accent btn-lg">Create your logbook <ArrowRight /></Link>
+                <Link to="/search" className="btn btn-ghost btn-lg"><Search />Search sightings</Link>
+              </>
+            ) : (
+              <>
                 {profile?.status !== "pending" ? (
-                  <Link to="/submit" className="btn btn-accent btn-lg">
-                    <PlusCircle className="h-4 w-4" aria-hidden="true" />
-                    Log a sighting
-                  </Link>
+                  <Link to="/submit" className="btn btn-accent btn-lg"><PlusCircle />Log a sighting</Link>
                 ) : null}
-                <Link
-                  to="/stamps"
-                  className="btn btn-lg"
-                  style={{ color: "var(--board-ink)", border: "1px solid #ffffff2e" }}
-                >
-                  Your stamp book
-                </Link>
-              </div>
-
-              <div className="mt-10 flex flex-wrap gap-8">
-                {[
-                  { label: "Sightings", value: totalReports, accent: "var(--sodium)" },
-                  { label: "Airport lots", value: airportsCovered },
-                  { label: "Regions", value: regionsCovered },
-                ].map((item) => (
-                  <div key={item.label}>
-                    <p className="stencil" style={{ color: "#8d8a80" }}>
-                      {item.label}
-                    </p>
-                    <p className="odo mt-1 text-3xl" style={{ color: item.accent ?? "var(--board-ink)" }}>
-                      <CountUp value={item.value} />
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+                <Link to="/dashboard" className="btn btn-secondary btn-lg">Open my logbook</Link>
+              </>
+            )}
           </div>
-        </section>
+          <div className="atlas-hero-stats">
+            {[
+              ["Sightings", totalReports],
+              ["Airports", airportsCovered],
+              ["Regions", regionsCovered],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <strong><CountUp value={Number(value)} /></strong>
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <RecentSightingsBoard
+          compact
+          selectedRegion={selectedRegion}
+          filteredReports={filteredReports}
+          recentReports={recentReports}
+          visibleRows={visibleRows}
+          loading={loading}
+          showAll={showAll}
+          onToggleShowAll={() => setShowAll((value) => !value)}
+        />
+      </section>
       )}
 
       {error ? <ErrorState title="Could not load the register" message={error} /> : null}
@@ -453,7 +407,9 @@ export function HomePage() {
       ) : null}
 
       {/* ============================= 2 · SEARCH ========================= */}
-      <Reveal as="section" className="space-y-5">
+      {isSearchPage ? (
+      <Reveal as="section" className="search-filter-section space-y-4">
+        <div id="register-search" className="scroll-mt-24" />
         <SectionHeader
           eyebrow="Find a car"
           title="Search the register"
@@ -470,7 +426,7 @@ export function HomePage() {
           resultCount={isSearching ? searchTotal : undefined}
           onSubmit={() =>
             document
-              .getElementById(isSearching ? "results" : "board")
+              .getElementById(isSearching ? "results" : "gate-map")
               ?.scrollIntoView({ behavior: "smooth", block: "start" })
           }
         />
@@ -535,11 +491,13 @@ export function HomePage() {
           </div>
         ) : null}
       </Reveal>
+      ) : null}
 
       {/* =========================== 3 · TELEMETRY ======================== */}
-      <Reveal as="section" className="space-y-5">
+      {!isSearchPage ? (
+      <Reveal as="section" className="home-telemetry space-y-5">
         <SectionHeader title="Fleet telemetry" eyebrow="Readouts" />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="home-telemetry-grid grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label="Total sightings"
             value={formatNumber(totalReports)}
@@ -596,13 +554,58 @@ export function HomePage() {
           />
         </div>
       </Reveal>
+      ) : null}
+
+      {!isSearchPage ? (
+        <Reveal as="section" className="home-how">
+          <div className="home-how-heading">
+            <p className="product-kicker">From counter to community</p>
+            <h2>A better rental picture in under a minute.</h2>
+            <p>
+              No essays and no perfect memory required. A few useful details turn one rental into
+              intelligence for the next traveler.
+            </p>
+          </div>
+          <div className="home-how-steps">
+            {[
+              {
+                icon: KeyRound,
+                number: "01",
+                title: "Pick up the keys",
+                body: "Get the actual car behind the category you booked.",
+              },
+              {
+                icon: ScanLine,
+                number: "02",
+                title: "Notice the details",
+                body: "Mileage, condition, equipment, and the rental desk.",
+              },
+              {
+                icon: MapPin,
+                number: "03",
+                title: "Pin it to the atlas",
+                body: "Your report helps reveal what is really at that airport.",
+              },
+            ].map(({ icon: Icon, number, title, body }) => (
+              <article key={number}>
+                <span className="home-how-number">{number}</span>
+                <div><Icon /></div>
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
+          </div>
+        </Reveal>
+      ) : null}
 
       {/* ============================== 4 · MAP =========================== */}
-      <Reveal as="section" className="space-y-5">
+      {isSearchPage ? (
+      <Reveal as="section" className="search-map-section space-y-4">
+        <div id="gate-map" className="scroll-mt-24" />
         <SectionHeader
           title="Gate map"
           eyebrow="Where the fleet sits"
-          description="Select a region to filter the board below."
+          description="Select a region to narrow the search results."
           action={
             selectedRegion ? (
               <Button size="sm" variant="secondary" onClick={() => setSelectedRegion(null)}>
@@ -624,66 +627,89 @@ export function HomePage() {
           }}
         />
       </Reveal>
-
-      {/* ========================== 5 · THE BOARD ========================= */}
-      <Reveal as="section" className="scroll-mt-24 space-y-5">
-        <div id="board" />
-        <Board
-          title="Recent sightings"
-          subtitle={
-            selectedRegion
-              ? `Filtered to ${selectedRegion.regionName}`
-              : "Newest first · reporter identities never shown"
-          }
-          live
-          actions={
-            <span className="mono text-[11px] board-dim">
-              {filteredReports.length} shown
-            </span>
-          }
-        >
-          <BoardHeaderRow
-            columns={["Airport", "Vehicle", "Company", "Odometer", "Condition", "Seen"]}
-            hideBelowMd={["Company", "Odometer", "Seen"]}
-          />
-
-          {loading ? (
-            <div className="px-5 py-8">
-              <p className="mono text-sm board-dim">Loading register…</p>
-            </div>
-          ) : visibleRows.length ? (
-            <div className="flip-stagger">
-              {visibleRows.map((report, index) => (
-                <BoardRow
-                  key={`${report.airport_code}-${report.model}-${report.observed_date}-${index}`}
-                  report={report}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="px-5 py-10 text-center">
-              <p className="sign text-lg" style={{ color: "var(--board-ink)" }}>
-                No sightings match
-              </p>
-              <p className="mono mt-1 text-xs board-dim">
-                {recentReports.length ? "Try loosening the filters." : "Nothing logged yet."}
-              </p>
-            </div>
-          )}
-
-          {filteredReports.length > 12 ? (
-            <button
-              type="button"
-              onClick={() => setShowAll((value) => !value)}
-              className="mono w-full py-3 text-[11px] font-bold uppercase tracking-[0.16em] transition-colors"
-              style={{ color: "var(--sodium)", background: "#0b0d10" }}
-            >
-              {showAll ? "Collapse" : `Show all ${filteredReports.length}`}
-            </button>
-          ) : null}
-        </Board>
-      </Reveal>
+      ) : null}
     </div>
+  );
+}
+
+function RecentSightingsBoard({
+  compact = false,
+  selectedRegion,
+  filteredReports,
+  recentReports,
+  visibleRows,
+  loading,
+  showAll,
+  onToggleShowAll,
+}: {
+  compact?: boolean;
+  selectedRegion: SelectedRegion | null;
+  filteredReports: PublicRecentReport[];
+  recentReports: PublicRecentReport[];
+  visibleRows: PublicRecentReport[];
+  loading: boolean;
+  showAll: boolean;
+  onToggleShowAll: () => void;
+}) {
+  const rows = compact ? visibleRows.slice(0, 5) : visibleRows;
+
+  return (
+    <Reveal as="section" className={`scroll-mt-24 space-y-5 ${compact ? "hero-sightings" : ""}`}>
+      <div id="board" />
+      <Board
+        className={compact ? "hero-sightings-board" : undefined}
+        title="Recent sightings"
+        subtitle={
+          selectedRegion
+            ? `Filtered to ${selectedRegion.regionName}`
+            : "Newest first · reporter identities never shown"
+        }
+        live
+        actions={<span className="mono text-[11px] board-dim">{filteredReports.length} shown</span>}
+      >
+        <BoardHeaderRow
+          columns={["Airport", "Vehicle", "Company", "Odometer", "Condition", "Seen"]}
+          hideBelowMd={["Company", "Odometer", "Seen"]}
+        />
+
+        {loading ? (
+          <div className="px-5 py-8">
+            <p className="mono text-sm board-dim">Loading register…</p>
+          </div>
+        ) : rows.length ? (
+          <div className="flip-stagger">
+            {rows.map((report, index) => (
+              <BoardRow
+                key={`${report.airport_code}-${report.model}-${report.observed_date}-${index}`}
+                report={report}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="px-5 py-10 text-center">
+            <p className="sign text-lg" style={{ color: "var(--board-ink)" }}>No sightings match</p>
+            <p className="mono mt-1 text-xs board-dim">
+              {recentReports.length ? "Try loosening the filters." : "Nothing logged yet."}
+            </p>
+          </div>
+        )}
+
+        {compact ? (
+          <Link to="/search" className="hero-sightings-more">
+            View all {filteredReports.length} sightings <ArrowRight />
+          </Link>
+        ) : filteredReports.length > 12 ? (
+          <button
+            type="button"
+            onClick={onToggleShowAll}
+            className="mono w-full py-3 text-[11px] font-bold uppercase tracking-[0.16em] transition-colors"
+            style={{ color: "var(--sodium)", background: "#0b0d10" }}
+          >
+            {showAll ? "Collapse" : `Show all ${filteredReports.length}`}
+          </button>
+        ) : null}
+      </Board>
+    </Reveal>
   );
 }
 

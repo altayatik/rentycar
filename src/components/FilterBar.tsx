@@ -111,7 +111,7 @@ export function FilterBar({
         ) : null}
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.85fr)_minmax(0,1fr)_140px]">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.85fr)_minmax(0,1fr)_140px]">
         <Field label="Airport">
           {(id) => (
             <>

@@ -15,7 +15,6 @@ RentyCar is "Flighty for rental cars": a public rental-car intelligence site for
 ## Local Setup
 
 ```bash
-cd /Users/altayatik/Desktop/rentycar
 npm install
 ```
 
@@ -40,8 +39,10 @@ npm run dev
 1. Open the Supabase SQL editor for `https://rxvwddwzqfoxxfcibvmd.supabase.co`.
 2. Run `supabase/schema.sql`.
 3. Run `supabase/seed.sql`.
-4. **Run `supabase/migrations/0001_open_signup_and_admin.sql`.** Required — without it,
-   signup, the approval queue, and the whole admin panel will not work.
+4. Run the SQL files in `supabase/migrations/` in numeric order:
+   - `0001_open_signup_and_admin.sql`
+   - `0002_public_search.sql`
+   - `0003_account_settings.sql`
 5. In Supabase Auth settings, **enable** public signups (the app gates access itself
    via the approval queue) and turn **off** "Confirm email".
 6. If your admin account is not called `master`, edit the last statement of the
@@ -69,6 +70,17 @@ Reset works only for accounts that supplied an email. It uses Supabase's built-i
 mailer, so enable an SMTP sender under Auth → Emails if the default rate limit
 becomes a problem. Accounts with no email have no self-service recovery; an admin
 has to reset them.
+
+### Account settings
+
+Signed-in users can open **Account** from the workspace navigation to update their
+name, username, email, and password. Username changes must go through the
+`update_own_username` database function installed by migration `0003`; the function
+keeps username-only Supabase login addresses synchronized without allowing users to
+change their role or approval status.
+
+Email changes use Supabase Auth's verification flow. Once a real email is active,
+the profile is automatically marked for email-based sign in.
 
 ## Demo Users
 
@@ -109,11 +121,11 @@ The user script creates or updates Supabase Auth users, forces the demo password
 
 Reference data lives in:
 
-- [src/data/reference/airports.ts](/Users/altayatik/Desktop/rentycar/src/data/reference/airports.ts)
-- [src/data/reference/rentalCompanies.ts](/Users/altayatik/Desktop/rentycar/src/data/reference/rentalCompanies.ts)
-- [src/data/reference/vehicleCatalog.ts](/Users/altayatik/Desktop/rentycar/src/data/reference/vehicleCatalog.ts)
-- [src/data/reference/regions.ts](/Users/altayatik/Desktop/rentycar/src/data/reference/regions.ts)
-- [src/data/reference/dataSources.md](/Users/altayatik/Desktop/rentycar/src/data/reference/dataSources.md)
+- `src/data/reference/airports.ts`
+- `src/data/reference/rentalCompanies.ts`
+- `src/data/reference/vehicleCatalog.ts`
+- `src/data/reference/regions.ts`
+- `src/data/reference/dataSources.md`
 
 Run `supabase/seed.sql` after `schema.sql` to load airports, rental companies, car makes, and car models.
 
@@ -147,8 +159,35 @@ Use GitHub Pages with GitHub Actions as the Pages source. The workflow builds `d
 - Reports are soft-deleted with `deleted_at`; admins can restore them.
 - Admin actions run through `SECURITY DEFINER` RPCs that re-check `is_admin()`
   server-side, so a tampered client cannot escalate.
-- A database trigger stops users from editing their own `role`, `status`, or
-  `username`, even though they can now edit their own profile row.
+- A database trigger stops users from editing their own `role` or `status`.
+  Username changes are allowed only through the guarded account-settings RPC.
+
+## Performance Architecture
+
+- Routes are loaded on demand. Public, auth, member, submission, and admin screens
+  are emitted as separate Vite chunks instead of shipping the whole application on
+  first load.
+- Home and Search share cached public-data promises. This prevents duplicate
+  Supabase reads during React Strict Mode development mounts and when navigating
+  between those two routes.
+- Home loads only the catalogue data it displays. Make/model filter catalogues are
+  deferred until Search is opened.
+- Large below-the-fold sections use `content-visibility: auto`, allowing supporting
+  browsers to skip layout and paint work until those sections approach the viewport.
+- `src/assets/logo.png` is a 256px retina source; the UI displays it at 42–64px.
+  Keep future replacements close to this resolution instead of committing a
+  multi-megabyte source image.
+
+To check performance-sensitive output:
+
+```bash
+npm run build
+find dist/assets -maxdepth 1 -type f -print0 | xargs -0 ls -lhS
+```
+
+The initial `index-*.js` chunk should remain substantially smaller than the sum of
+the route chunks. A new large route should be dynamically imported in
+`src/app/router.tsx`.
 
 ### Fixed in migration 0001
 

@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CarFront, Gauge, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { BackgroundArt } from "../../components/BackgroundArt";
@@ -17,53 +17,47 @@ export function AuthLayout({
   footer?: ReactNode;
   aside?: ReactNode;
 }) {
+  const isLogin = title === "Welcome back";
+
   return (
-    <div className="relative flex min-h-screen flex-col px-4 py-8 sm:px-6">
+    <div className="auth-shell">
       <BackgroundArt />
-
-      <div className="mx-auto w-full max-w-5xl">
-        <Link
-          to="/"
-          className="muted inline-flex items-center gap-1.5 text-sm font-semibold transition-colors hover:text-ink"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to RentyCar
+      <aside className="auth-brand-panel">
+        <Link to="/" className="auth-brand">
+          <img src={logo} alt="" width="42" height="42" decoding="async" />
+          <span><strong>RentyCar</strong></span>
         </Link>
-      </div>
-
-      <div
-        className={`mx-auto flex w-full flex-1 items-center ${aside ? "max-w-5xl" : "max-w-md"}`}
-      >
-        <div className={`grid w-full gap-8 py-8 ${aside ? "lg:grid-cols-[1fr_0.85fr] lg:items-center" : ""}`}>
-          <div className="animate-rise mx-auto w-full max-w-md">
-            <Link to="/" className="mb-7 flex items-center justify-center gap-3">
-              <img
-                src={logo}
-                alt=""
-                className="h-14 w-14 rounded-full object-cover"
-                style={{ boxShadow: "var(--sh-2)" }}
-              />
-              <span className="text-2xl font-extrabold tracking-tight">RentyCar</span>
-            </Link>
-
-            <div className="card p-6 sm:p-8">
-              <div className="mb-6 text-center">
-                <h1 className="h1">{title}</h1>
-                {subtitle ? <p className="muted mt-2 text-sm leading-relaxed">{subtitle}</p> : null}
-              </div>
-              {children}
-            </div>
-
-            {footer ? <div className="mt-6 text-center text-sm">{footer}</div> : null}
-          </div>
-
-          {aside ? (
-            <div className="animate-rise hidden lg:block" style={{ animationDelay: "0.12s" }}>
-              {aside}
-            </div>
-          ) : null}
+        <div className="auth-brand-copy">
+          <p>{isLogin ? "WELCOME BACK" : "YOUR RENTAL LOGBOOK"}</p>
+          <h2>
+            {isLogin ? "Your travel history has been waiting." : "Remember every car behind the keys."}
+          </h2>
+          <p className="auth-brand-description">
+            {isLogin
+              ? "Pick up where you left off. Your sightings, airport stamps, and fleet notes are right where you left them."
+              : "Build a private record of the airport rentals, equipment, and little details worth remembering."}
+          </p>
         </div>
-      </div>
+        <div className="auth-brand-note">
+          <span><CarFront />Actual vehicles</span>
+          <span><Gauge />Real mileage</span>
+          <span><MapPin />Airport by airport</span>
+        </div>
+      </aside>
+
+      <main className="auth-main">
+        <Link to="/" className="auth-back"><ArrowLeft />Back to atlas</Link>
+        <div className="auth-form-wrap animate-rise">
+          <div className="auth-form-heading">
+            <span>RentyCar account</span>
+            <h1>{title}</h1>
+            {subtitle ? <p>{subtitle}</p> : null}
+          </div>
+          <div className="auth-card">{children}</div>
+          {footer ? <div className="auth-footer">{footer}</div> : null}
+          {aside ? <div className="auth-aside">{aside}</div> : null}
+        </div>
+      </main>
     </div>
   );
 }

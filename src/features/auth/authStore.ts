@@ -40,6 +40,8 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateNickname: (nickname: string) => Promise<void>;
+  updateUsername: (username: string) => Promise<void>;
+  updateEmail: (email: string) => Promise<{ confirmationRequired: boolean }>;
   requestPasswordReset: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
 }
@@ -63,6 +65,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
+
+  const syncEmailLoginFlag = useCallback(async (authUser: User) => {
+    if (!supabase) return;
+    const email = authUser.email?.trim().toLowerCase() ?? "";
+    if (!email || email.endsWith("@rentycar.local")) return;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ uses_email_login: true })
+      .eq("id", authUser.id)
+      .eq("uses_email_login", false);
+
+    if (error) console.error("Failed to sync email login preference", error);
+  }, []);
 
   const loadProfile = useCallback(async (userId: string) => {
     if (!supabase) {
@@ -101,7 +117,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return;
       setSession(data.session);
       setUser(data.session?.user ?? null);
-      if (data.session?.user) await loadProfile(data.session.user.id);
+      if (data.session?.user) {
+        await syncEmailLoginFlag(data.session.user);
+        await loadProfile(data.session.user.id);
+      }
       if (mounted) setLoading(false);
     });
 
@@ -111,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       if (nextSession?.user) {
-        void loadProfile(nextSession.user.id);
+        void syncEmailLoginFlag(nextSession.user).then(() => loadProfile(nextSession.user.id));
       } else {
         setProfile(null);
       }
@@ -121,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [loadProfile]);
+  }, [loadProfile, syncEmailLoginFlag]);
 
   /**
    * Accepts either a username or an email address.
@@ -239,6 +258,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [loadProfile, user],
   );
 
+  const updateUsername = useCallback(
+    async (username: string) => {
+      if (!supabase || !user) throw new Error("You are not signed in.");
+      const normalized = username.trim().toLowerCase();
+      if (!/^[a-z0-9_-]{3,32}$/.test(normalized)) {
+        throw new Error("Username is 3-32 characters: letters, numbers, underscores, or dashes.");
+      }
+
+      const { error } = await supabase.rpc("update_own_username", {
+        target_username: normalized,
+      });
+      if (error) throw error;
+      await supabase.auth.refreshSession();
+      await loadProfile(user.id);
+    },
+    [loadProfile, user],
+  );
+
+  const updateEmail = useCallback(
+    async (email: string) => {
+      if (!supabase || !user) throw new Error("You are not signed in.");
+      const normalized = email.trim().toLowerCase();
+      const { data, error } = await supabase.auth.updateUser({ email: normalized });
+      if (error) throw error;
+
+      const confirmationRequired = data.user.email?.toLowerCase() !== normalized;
+      if (!confirmationRequired) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ uses_email_login: true })
+          .eq("id", user.id);
+        if (profileError) throw profileError;
+        await loadProfile(user.id);
+      }
+
+      return { confirmationRequired };
+    },
+    [loadProfile, user],
+  );
+
   const requestPasswordReset = useCallback(async (email: string) => {
     if (!supabase) throw new Error(supabaseConfigError || "Supabase is not configured.");
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
@@ -264,6 +323,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       refreshProfile,
       updateNickname,
+      updateUsername,
+      updateEmail,
       requestPasswordReset,
       updatePassword,
     }),
@@ -277,6 +338,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       refreshProfile,
       updateNickname,
+      updateUsername,
+      updateEmail,
       requestPasswordReset,
       updatePassword,
     ],

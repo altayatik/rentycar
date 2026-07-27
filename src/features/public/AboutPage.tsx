@@ -1,6 +1,5 @@
 import { ArrowRight, ClipboardCheck, Compass, Mail, ShieldCheck, Users } from "lucide-react";
 import { Link } from "react-router-dom";
-import { TerminalScene } from "../../components/TerminalScene";
 import { Callout, Card, Reveal, SectionHeader } from "../../components/ui";
 
 const steps = [
@@ -73,44 +72,15 @@ export function AboutPage() {
   return (
     <div className="space-y-16">
       {/* ------------------------------- Hero ------------------------------ */}
-      <section className="animate-rise pt-6">
-        <div
-          className="relative overflow-hidden"
-          style={{
-            borderRadius: "var(--r-md)",
-            borderTop: "3px solid var(--sodium)",
-            boxShadow: "var(--sh-board)",
-            background: "#16181c",
-          }}
-        >
-          <div className="absolute inset-0">
-            <TerminalScene className="h-full w-full" />
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(96deg, #121418f2 0%, #12141ae0 40%, #12141a80 66%, transparent 90%)",
-              }}
-            />
-          </div>
-
-          <div className="relative px-6 py-14 sm:px-10">
-            <p className="stencil" style={{ color: "var(--sodium)" }}>
-              About RentyCar
-            </p>
-            <h1 className="h-display mt-4 max-w-2xl" style={{ color: "var(--board-ink)" }}>
-              Know what
-              <br />
-              you&apos;re <span style={{ color: "var(--sodium)" }}>getting</span>
-            </h1>
-            <p
-              className="mt-5 max-w-xl text-base leading-relaxed"
-              style={{ color: "var(--board-ink-2)" }}
-            >
-              Rental sites promise a &ldquo;Toyota Camry or similar&rdquo; and leave you guessing.
-              RentyCar is a community register of what people actually drove off the lot with.
-            </p>
-          </div>
+      <section className="about-hero animate-rise">
+        <p className="product-kicker">Why RentyCar exists</p>
+        <h1>The useful details live beyond <span>“or similar.”</span></h1>
+        <div>
+          <p>
+            Rental sites sell categories. Travelers receive actual cars. RentyCar closes that gap
+            with a public, community-built record of what left the lot.
+          </p>
+          <strong>Independent. Private by default. Built for curious renters.</strong>
         </div>
       </section>
 

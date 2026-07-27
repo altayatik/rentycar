@@ -1,37 +1,82 @@
+import { lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AdminRoute } from "../components/AdminRoute";
 import { AppShell } from "../components/AppShell";
 import { ProtectedRoute } from "../components/ProtectedRoute";
-import { AdminPage } from "../features/admin/AdminPage";
-import { LoginPage } from "../features/auth/LoginPage";
-import { ForgotPasswordPage, ResetPasswordPage } from "../features/auth/PasswordResetPages";
-import { SignupPage } from "../features/auth/SignupPage";
-import { DashboardPage } from "../features/dashboard/DashboardPage";
-import { FriendsPage } from "../features/dashboard/FriendsPage";
-import { StampsPage } from "../features/dashboard/StampsPage";
-import { SubmitReportForm } from "../features/dashboard/SubmitReportForm";
-import { AboutPage } from "../features/public/AboutPage";
-import { HomePage } from "../features/public/HomePage";
-import { NotFoundPage } from "../features/public/NotFoundPage";
+
+const HomePage = lazy(() => import("../features/public/HomePage").then((module) => ({ default: module.HomePage })));
+const AboutPage = lazy(() => import("../features/public/AboutPage").then((module) => ({ default: module.AboutPage })));
+const NotFoundPage = lazy(() =>
+  import("../features/public/NotFoundPage").then((module) => ({ default: module.NotFoundPage })),
+);
+const LoginPage = lazy(() => import("../features/auth/LoginPage").then((module) => ({ default: module.LoginPage })));
+const SignupPage = lazy(() => import("../features/auth/SignupPage").then((module) => ({ default: module.SignupPage })));
+const ForgotPasswordPage = lazy(() =>
+  import("../features/auth/PasswordResetPages").then((module) => ({ default: module.ForgotPasswordPage })),
+);
+const ResetPasswordPage = lazy(() =>
+  import("../features/auth/PasswordResetPages").then((module) => ({ default: module.ResetPasswordPage })),
+);
+const AccountPage = lazy(() =>
+  import("../features/dashboard/AccountPage").then((module) => ({ default: module.AccountPage })),
+);
+const DashboardPage = lazy(() =>
+  import("../features/dashboard/DashboardPage").then((module) => ({ default: module.DashboardPage })),
+);
+const FriendsPage = lazy(() =>
+  import("../features/dashboard/FriendsPage").then((module) => ({ default: module.FriendsPage })),
+);
+const StampsPage = lazy(() =>
+  import("../features/dashboard/StampsPage").then((module) => ({ default: module.StampsPage })),
+);
+const SubmitReportForm = lazy(() =>
+  import("../features/dashboard/SubmitReportForm").then((module) => ({ default: module.SubmitReportForm })),
+);
+const AdminPage = lazy(() => import("../features/admin/AdminPage").then((module) => ({ default: module.AdminPage })));
+
+function deferred(element: ReactNode) {
+  return (
+    <Suspense
+      fallback={
+        <div className="route-loading" role="status" aria-label="Loading page">
+          <span />
+        </div>
+      }
+    >
+      {element}
+    </Suspense>
+  );
+}
 
 export const router = createBrowserRouter(
   [
-    { path: "/", element: <AppShell><HomePage /></AppShell> },
-    { path: "/about", element: <AppShell><AboutPage /></AppShell> },
+    { path: "/", element: <AppShell>{deferred(<HomePage />)}</AppShell> },
+    { path: "/search", element: <AppShell wide>{deferred(<HomePage view="search" />)}</AppShell> },
+    { path: "/about", element: <AppShell>{deferred(<AboutPage />)}</AppShell> },
     // Legal now lives at the bottom of About. Keep the old URL working.
     { path: "/legal", element: <Navigate to="/about#legal" replace /> },
 
-    { path: "/login", element: <LoginPage /> },
-    { path: "/signup", element: <SignupPage /> },
-    { path: "/forgot-password", element: <ForgotPasswordPage /> },
-    { path: "/reset-password", element: <ResetPasswordPage /> },
+    { path: "/login", element: deferred(<LoginPage />) },
+    { path: "/signup", element: deferred(<SignupPage />) },
+    { path: "/forgot-password", element: deferred(<ForgotPasswordPage />) },
+    { path: "/reset-password", element: deferred(<ResetPasswordPage />) },
 
+    {
+      path: "/account",
+      element: (
+        <ProtectedRoute>
+          <AppShell>
+            {deferred(<AccountPage />)}
+          </AppShell>
+        </ProtectedRoute>
+      ),
+    },
     {
       path: "/dashboard",
       element: (
         <ProtectedRoute>
           <AppShell>
-            <DashboardPage />
+            {deferred(<DashboardPage />)}
           </AppShell>
         </ProtectedRoute>
       ),
@@ -41,7 +86,7 @@ export const router = createBrowserRouter(
       element: (
         <ProtectedRoute>
           <AppShell>
-            <FriendsPage />
+            {deferred(<FriendsPage />)}
           </AppShell>
         </ProtectedRoute>
       ),
@@ -51,7 +96,7 @@ export const router = createBrowserRouter(
       element: (
         <ProtectedRoute>
           <AppShell>
-            <StampsPage />
+            {deferred(<StampsPage />)}
           </AppShell>
         </ProtectedRoute>
       ),
@@ -62,7 +107,7 @@ export const router = createBrowserRouter(
         <ProtectedRoute>
           <AppShell>
             <div className="mx-auto max-w-3xl">
-              <SubmitReportForm />
+              {deferred(<SubmitReportForm />)}
             </div>
           </AppShell>
         </ProtectedRoute>
@@ -73,13 +118,13 @@ export const router = createBrowserRouter(
       element: (
         <AdminRoute>
           <AppShell>
-            <AdminPage />
+            {deferred(<AdminPage />)}
           </AppShell>
         </AdminRoute>
       ),
     },
 
-    { path: "*", element: <AppShell><NotFoundPage /></AppShell> },
+    { path: "*", element: <AppShell>{deferred(<NotFoundPage />)}</AppShell> },
   ],
   { basename: "/rentycar" },
 );

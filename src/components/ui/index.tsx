@@ -642,20 +642,14 @@ export function StatCard({
   tone?: "sky" | "mint" | "gold" | "terra" | "lavender";
   icon?: ReactNode;
 }) {
-  // One decorative accent, full stop. Colour on this site now means
-  // something — blue and green are reserved for encoding data (map density,
-  // condition, pass/fail), so a grid of stat tiles gets amber and ink only.
-  void tone;
-
   return (
-    <div className="bay card-hover relative overflow-hidden px-4 py-3.5">
-      <span
-        className="absolute inset-y-0 left-0 w-1"
-        style={{ background: "var(--sodium)" }}
-        aria-hidden="true"
-      />
+    <div
+      className="bay stat-card card-hover relative overflow-hidden px-4 py-3.5"
+      data-tone={tone}
+    >
+      <span className="stat-card-accent absolute inset-y-0 left-0 w-1" aria-hidden="true" />
       {icon ? (
-        <span className="absolute right-3 top-3" style={{ color: "var(--ink-4)" }} aria-hidden="true">
+        <span className="stat-card-icon absolute right-3 top-3" aria-hidden="true">
           {icon}
         </span>
       ) : null}

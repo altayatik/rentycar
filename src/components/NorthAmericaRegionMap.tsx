@@ -259,7 +259,7 @@ export function NorthAmericaRegionMap({
               Regional filter
             </div>
             <p className="mt-2 leading-relaxed opacity-90">
-              Selecting a region filters the report feed and focuses airport searches on that area.
+              Selecting a region narrows the search results and focuses airport searches on that area.
             </p>
             <p className="mt-2 leading-relaxed opacity-75">
               This is the rental pickup location&apos;s state or province — not the vehicle&apos;s license

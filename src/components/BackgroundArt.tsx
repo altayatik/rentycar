@@ -1,19 +1,3 @@
-/**
- * Backdrop: a warm wash scattered with faded passport cancellations, as
- * though the page itself were a page of the stamp book.
- *
- * Replaces an earlier literal apron drawing (skyline, taxiway, compass
- * rose) that read as clip-art. Stamps tie the background to the product's
- * own iconography instead.
- *
- * TWO THINGS THAT MUST NOT CHANGE:
- *   1. `body` stays transparent. This is a fixed layer at z-index -10, and
- *      per CSS painting order an opaque body background paints over it —
- *      that bug hid this entire component. Base colour lives on :root.
- *   2. No SVG filters, no blend modes, no scroll listeners. All three
- *      previously froze Chrome's renderer outright.
- */
-
 interface ScatteredStamp {
   code: string;
   x: number;
@@ -23,8 +7,6 @@ interface ScatteredStamp {
   tone: string;
 }
 
-// Hand-placed rather than random so the composition stays balanced and
-// stamps never collide with each other.
 const STAMPS: ScatteredStamp[] = [
   { code: "LAX", x: 120, y: 150, size: 84, rotate: -9, tone: "var(--safety)" },
   { code: "JFK", x: 420, y: 92, size: 62, rotate: 7, tone: "var(--runway)" },
@@ -47,7 +29,6 @@ const STAMPS: ScatteredStamp[] = [
 export function BackgroundArt() {
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
-      {/* Warm base wash */}
       <div
         className="absolute inset-0"
         style={{
@@ -55,8 +36,6 @@ export function BackgroundArt() {
             "linear-gradient(176deg, #f2ede3 0%, #ece7dd 42%, #e5dfd3 76%, #ded7c9 100%)",
         }}
       />
-
-      {/* Colour fields — warm high right, cool low left */}
       <div
         className="absolute"
         style={{
@@ -79,8 +58,6 @@ export function BackgroundArt() {
             "radial-gradient(circle, rgba(58,110,165,0.16) 0%, rgba(58,110,165,0.05) 44%, transparent 74%)",
         }}
       />
-
-      {/* Scattered cancellations */}
       <svg
         className="absolute inset-0 h-full w-full"
         viewBox="0 0 1440 1050"
@@ -90,8 +67,6 @@ export function BackgroundArt() {
           <Stamp key={stamp.code} stamp={stamp} />
         ))}
       </svg>
-
-      {/* Vignette to settle the edges */}
       <div
         className="absolute inset-0"
         style={{
@@ -122,7 +97,7 @@ function Stamp({ stamp }: { stamp: ScatteredStamp }) {
         dominantBaseline="central"
         fill="currentColor"
         style={{
-          fontFamily: '"Barlow Condensed", Barlow, sans-serif',
+          fontFamily: '"Barlow Condensed", Manrope, sans-serif',
           fontWeight: 800,
           fontSize: size * 0.34,
           letterSpacing: "0.02em",
@@ -130,7 +105,6 @@ function Stamp({ stamp }: { stamp: ScatteredStamp }) {
       >
         {code}
       </text>
-      {/* tick marks at the cardinal points, as on a real canceller */}
       {[0, 90, 180, 270].map((angle) => (
         <line
           key={angle}
