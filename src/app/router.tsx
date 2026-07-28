@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AdminRoute } from "../components/AdminRoute";
 import { AppShell } from "../components/AppShell";
 import { ProtectedRoute } from "../components/ProtectedRoute";
+import { getAppBasePath } from "../lib/basePath";
 
 const HomePage = lazy(() => import("../features/public/HomePage").then((module) => ({ default: module.HomePage })));
 const AboutPage = lazy(() => import("../features/public/AboutPage").then((module) => ({ default: module.AboutPage })));
@@ -126,5 +127,5 @@ export const router = createBrowserRouter(
 
     { path: "*", element: <AppShell>{deferred(<NotFoundPage />)}</AppShell> },
   ],
-  { basename: "/rentycar" },
+  { basename: getAppBasePath() },
 );

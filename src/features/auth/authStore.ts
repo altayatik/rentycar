@@ -15,6 +15,7 @@ import {
   supabaseConfigError,
   usernameToPseudoEmail,
 } from "../../lib/supabase";
+import { getAppUrl } from "../../lib/basePath";
 import type { Profile } from "../../lib/types";
 
 const PROFILE_COLUMNS =
@@ -301,7 +302,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const requestPasswordReset = useCallback(async (email: string) => {
     if (!supabase) throw new Error(supabaseConfigError || "Supabase is not configured.");
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-      redirectTo: `${window.location.origin}/rentycar/reset-password`,
+      redirectTo: `${window.location.origin}${getAppUrl("/reset-password")}`,
     });
     if (error) throw error;
   }, []);
